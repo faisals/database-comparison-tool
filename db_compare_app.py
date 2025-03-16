@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-Database Table Comparison Tool - A web application to compare tables between databases.
+CORAL - Database Comparison Tool
+A web application for comparing schemas and data between database connections.
 """
 import os
 import secrets

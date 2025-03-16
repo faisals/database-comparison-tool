@@ -1,5 +1,5 @@
 """
-Main routes for the Database Comparison Tool.
+Main routes for CORAL - Database Comparison Tool.
 """
 from flask import Blueprint, render_template, session, redirect, url_for, request
 
