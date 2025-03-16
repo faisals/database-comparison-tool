@@ -1,0 +1,155 @@
+/* Schema Comparison Styles */
+
+/* Status Colors */
+.table-status-added {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.table-status-deleted {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.table-status-modified {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.table-status-unchanged {
+    color: #6c757d;
+}
+
+/* Status Icons */
+.status-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+    border-radius: 50%;
+    margin-right: 8px;
+    font-weight: bold;
+}
+
+.table-status-added.status-icon {
+    background-color: rgba(40, 167, 69, 0.2);
+}
+
+.table-status-deleted.status-icon {
+    background-color: rgba(220, 53, 69, 0.2);
+}
+
+.table-status-modified.status-icon {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
+.table-status-unchanged.status-icon {
+    background-color: rgba(108, 117, 125, 0.2);
+}
+
+/* Diff Summary */
+.diff-summary {
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Table Row */
+.table-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.table-row:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Detailed Comparison View */
+.comparison-detail {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.comparison-detail .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.schema-header {
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.schema-container {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    background-color: #f8f9fa;
+    min-height: 200px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+/* Column Items */
+.column-item {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.25rem;
+    border-left: 4px solid transparent;
+    background-color: #fff;
+    transition: box-shadow 0.2s;
+}
+
+.column-item:hover {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.column-item.added {
+    border-left-color: #28a745;
+}
+
+.column-item.deleted {
+    border-left-color: #dc3545;
+}
+
+.column-item.modified {
+    border-left-color: #007bff;
+}
+
+.column-item.unchanged {
+    border-left-color: #6c757d;
+}
+
+.column-placeholder {
+    color: #adb5bd;
+    font-style: italic;
+    padding: 0.75rem;
+}
+
+/* Progress Bar */
+.progress {
+    height: 1.5rem;
+    border-radius: 0.25rem;
+}
+
+.progress-bar {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Filter Buttons */
+.filter-btn {
+    font-size: 0.85rem;
+}
+
+.filter-btn.active {
+    font-weight: 600;
+}
+
+/* Badge Styles */
+.badge {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
