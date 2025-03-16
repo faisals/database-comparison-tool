@@ -53,119 +53,118 @@
     <div class="card mb-4" id="resultsCard" {% if comparison_in_progress %}style="display: none;"{% endif %}>
         <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #2196F3;">
             <h5 class="card-title mb-0">Tables Comparison Summary</h5>
-            <div>
-                <button class="btn btn-sm btn-light" id="showAllTables">Show All Tables</button>
-                <button class="btn btn-sm btn-light" id="showDifferencesOnly">Show Differences Only</button>
+            <div class="d-flex gap-2">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showDifferencesToggle">
+                    <label class="form-check-label text-white" for="showDifferencesToggle">Show Differences Only</label>
+                </div>
+                <button class="btn btn-sm btn-light ms-2" id="viewCreateScripts">View CREATE Scripts</button>
             </div>
         </div>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="tablesComparisonTable">
-                    <thead style="background-color: #F5F5F5; color: #333333;">
-                        <tr>
-                            <th>Table Name</th>
-                            <th>Source Database</th>
-                            <th>Target Database</th>
-                            <th>Status</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody id="comparisonTableBody">
-                        {% if not comparison_in_progress %}
-                        {% for table in schema_comparison %}
-                        <tr class="{% if table.differences %}table-row-diff{% else %}table-row-same{% endif %}">
-                            <td>{{ table.table_name }}</td>
-                            <td>
-                                {% if table.in_db1 %}
-                                    <span class="badge bg-success">Present</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Missing</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if table.in_db2 %}
-                                    <span class="badge bg-success">Present</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Missing</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if not table.differences %}
-                                    <span class="badge bg-success">Identical</span>
-                                {% else %}
-                                    <span class="badge bg-warning">Differences Found</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if table.in_db1 and table.in_db2 %}
-                                    <button class="btn btn-sm btn-outline-primary toggle-details" data-table="{{ table.table_name }}">
-                                        Show Details
-                                    </button>
-                                {% else %}
-                                    <span class="text-muted">Not comparable</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% if table.in_db1 and table.in_db2 %}
-                        <tr class="details-row" id="details-{{ table.table_name|replace(' ', '_')|replace('.', '_') }}" style="display: none;">
-                            <td colspan="5">
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead style="background-color: #F5F5F5; color: #333333;">
-                                            <tr>
-                                                <th>Column Name</th>
-                                                <th>Source Database</th>
-                                                <th>Target Database</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for column in table.columns %}
-                                            <tr class="{% if column.differences %}table-warning{% endif %}">
-                                                <td>{{ column.name }}</td>
-                                                <td>
-                                                    {% if column.in_db1 %}
-                                                        <span class="schema-status-unchanged">{{ column.db1_type }}</span>
-                                                        {% if column.db1_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
-                                                        {% if column.db1_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
-                                                        {% if column.db1_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
-                                                    {% else %}
+            <div class="accordion" id="tableAccordion">
+                {% if not comparison_in_progress %}
+                {% for table in schema_comparison %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-{{ table.table_name }}">
+                        <button class="accordion-button {% if not table.differences %}collapsed{% endif %}" 
+                                type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#collapse-{{ table.table_name|replace(' ', '_') }}">
+                            {{ table.table_name }} 
+                            {% if table.differences %}
+                                <span class="badge bg-warning ms-2">Differences</span>
+                            {% endif %}
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ table.table_name|replace(' ', '_') }}" 
+                         class="accordion-collapse collapse {% if table.differences %}show{% endif %}" 
+                         data-bs-parent="#tableAccordion">
+                        <div class="accordion-body {% if not table.in_db1 %}bg-danger-subtle{% elif not table.in_db2 %}bg-warning-subtle{% elif table.differences %}bg-info-subtle{% endif %}">
+                            {% if table.in_db1 and table.in_db2 %}
+                            <div class="table-responsive">
+                                <table class="table table-sm comparison-details">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Column Name</th>
+                                            <th colspan="2">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for column in table.columns %}
+                                        <tr>
+                                            <td class="fw-bold">{{ column.name }}</td>
+                                            <td colspan="2">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        Source: {{ column.db1_type }}
+                                                        {% if column.in_db1 %}
+                                                        <div class="column-attributes">
+                                                            {% if column.db1_nullable == 'No' %}<span class="badge bg-secondary me-1">NOT NULL</span>{% endif %}
+                                                            {% if column.db1_pk == 'Yes' %}<span class="badge bg-info me-1">PK</span>{% endif %}
+                                                            {% if column.db1_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                        </div>
+                                                        {% else %}
                                                         <span class="badge bg-danger">Missing</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    {% if column.in_db2 %}
-                                                        <span class="schema-status-unchanged">{{ column.db2_type }}</span>
-                                                        {% if column.db2_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
-                                                        {% if column.db2_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
-                                                        {% if column.db2_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
-                                                    {% else %}
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        Target: {{ column.db2_type }}
+                                                        {% if column.in_db2 %}
+                                                        <div class="column-attributes">
+                                                            {% if column.db2_nullable == 'No' %}<span class="badge bg-secondary me-1">NOT NULL</span>{% endif %}
+                                                            {% if column.db2_pk == 'Yes' %}<span class="badge bg-info me-1">PK</span>{% endif %}
+                                                            {% if column.db2_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                        </div>
+                                                        {% else %}
                                                         <span class="badge bg-danger">Missing</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    {% if not column.differences %}
-                                                        <span class="badge bg-success">Identical</span>
-                                                    {% else %}
-                                                        <span class="badge bg-warning">Different</span>
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endif %}
-                        {% endfor %}
-                        {% endif %}
-                    </tbody>
-                </table>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                Table comparison not available - table does not exist in both databases.
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
             </div>
         </div>
     </div>
     
+    <!-- CREATE Script Modal -->
+    <div class="modal fade" id="createScriptModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Table CREATE Scripts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Source Database</h6>
+                            <pre><code class="language-sql" id="sourceCreateScript"></code></pre>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Target Database</h6>
+                            <pre><code class="language-sql" id="targetCreateScript"></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="d-flex justify-content-between mb-4">
         <a href="{{ url_for('comparison.select_comparison_type') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Back to Comparison Type
@@ -178,138 +177,190 @@
 
 {% block scripts %}
 {{ super() }}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-sql.min.js"></script>
+
+<style>
+.accordion-button:not(.collapsed) {
+    color: inherit;
+    background-color: rgba(13, 110, 253, 0.04);
+}
+.accordion-button::after {
+    margin-left: 1rem;
+}
+.schema-type {
+    font-family: monospace;
+    font-size: 0.9em;
+}
+.column-attributes {
+    margin-top: 0.25rem;
+}
+.table-row[data-has-diff="false"] {
+    display: none;
+}
+.show-all .table-row {
+    display: block !important;
+}
+.bg-danger-subtle {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+.bg-warning-subtle {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+.bg-info-subtle {
+    background-color: rgba(13, 202, 240, 0.1);
+}
+</style>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Toggle details rows
-        document.querySelectorAll('.toggle-details').forEach(button => {
-            button.addEventListener('click', function() {
-                const tableName = this.dataset.table;
-                const detailsId = `details-${tableName.replace(/[ .]/g, '_')}`;
-                const detailsRow = document.getElementById(detailsId);
-                
-                if (detailsRow) {
-                    if (detailsRow.style.display === 'none') {
-                        detailsRow.style.display = '';
-                        this.textContent = 'Hide Details';
-                    } else {
-                        detailsRow.style.display = 'none';
-                        this.textContent = 'Show Details';
-                    }
-                }
-            });
+'use strict';
+
+// Initialize UI components
+document.addEventListener('DOMContentLoaded', function() {
+    const showDifferencesToggle = document.getElementById('showDifferencesToggle');
+    const tableAccordion = document.getElementById('tableAccordion');
+    const viewCreateScriptsBtn = document.getElementById('viewCreateScripts');
+    const createScriptModal = document.getElementById('createScriptModal');
+    
+    if (createScriptModal) {
+        const bsModal = new bootstrap.Modal(createScriptModal);
+        
+        viewCreateScriptsBtn?.addEventListener('click', function() {
+            const sourceScript = '-- Source table CREATE script will be shown here';
+            const targetScript = '-- Target table CREATE script will be shown here';
+            
+            const sourceEl = document.getElementById('sourceCreateScript');
+            const targetEl = document.getElementById('targetCreateScript');
+            
+            if (sourceEl) sourceEl.textContent = sourceScript;
+            if (targetEl) targetEl.textContent = targetScript;
+            
+            // Highlight syntax
+            if (typeof Prism !== 'undefined') {
+                Prism.highlightAll();
+            }
+            
+            bsModal.show();
+        });
+    }
+
+    if (showDifferencesToggle && tableAccordion) {
+        showDifferencesToggle.addEventListener('change', function() {
+            tableAccordion.classList.toggle('show-all', !this.checked);
         });
 
-        {% if comparison_in_progress %}
-        function createTableRow(table) {
-            const rowClass = table.differences ? 'table-row-diff' : 'table-row-same';
-            const row = document.createElement('tr');
-            row.className = rowClass;
-            
-            row.innerHTML = `
-                <td>${table.table_name}</td>
-                <td>
-                    ${table.in_db1 
-                        ? '<span class="badge bg-success">Present</span>'
-                        : '<span class="badge bg-danger">Missing</span>'}
-                </td>
-                <td>
-                    ${table.in_db2 
-                        ? '<span class="badge bg-success">Present</span>'
-                        : '<span class="badge bg-danger">Missing</span>'}
-                </td>
-                <td>
-                    ${!table.differences
-                        ? '<span class="badge bg-success">Identical</span>'
-                        : '<span class="badge bg-warning">Differences Found</span>'}
-                </td>
-                <td>
-                    ${table.in_db1 && table.in_db2 
-                        ? '<button class="btn btn-sm btn-outline-primary toggle-details" data-table="' + table.table_name + '">Show Details</button>'
-                        : '<span class="text-muted">Not comparable</span>'}
-                </td>
-            `;
-            
-            return row;
-        }
+        // Initialize with showing all tables
+        tableAccordion.classList.add('show-all');
+    }
+});
+</script>
 
-        function updateProgress(progress, processedTables, totalTables, currentTable) {
-            const progressBar = document.getElementById('progressBar');
-            const progressStatus = document.getElementById('progressStatus');
-            const tableCounter = document.getElementById('tableCounter');
-            const currentTableName = document.getElementById('currentTableName');
-            
-            progressBar.style.width = progress + '%';
-            progressBar.setAttribute('aria-valuenow', progress);
-            progressBar.textContent = progress + '%';
-            
-            progressStatus.textContent = currentTable ? `Processing: ${currentTable}` : 'Connecting to databases...';
-            tableCounter.textContent = `${processedTables} of ${totalTables} tables processed`;
-            currentTableName.textContent = currentTable || '';
-        }
+{% if comparison_in_progress %}
+<script>
+'use strict';
 
-        function fetchComparisonResults() {
-            fetch('/comparison/schema/status')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'in_progress') {
-                        updateProgress(
-                            data.progress,
-                            data.processed_tables,
-                            data.total_tables,
-                            data.current_table
-                        );
-                        setTimeout(fetchComparisonResults, 1000);
-                    } else if (data.status === 'complete') {
-                        document.getElementById('progressCard').style.display = 'none';
-                        document.getElementById('resultsCard').style.display = 'block';
-                        
-                        const tbody = document.getElementById('comparisonTableBody');
-                        tbody.innerHTML = '';
-                        data.results.forEach(table => tbody.appendChild(createTableRow(table)));
-                        
-                        // Reinitialize toggle details buttons
-                        document.querySelectorAll('.toggle-details').forEach(button => {
-                            button.addEventListener('click', function() {
-                                const tableName = this.dataset.table;
-                                const detailsId = `details-${tableName.replace(/[ .]/g, '_')}`;
-                                const detailsRow = document.getElementById(detailsId);
-                                if (detailsRow) {
-                                    if (detailsRow.style.display === 'none') {
-                                        detailsRow.style.display = '';
-                                        this.textContent = 'Hide Details';
-                                    } else {
-                                        detailsRow.style.display = 'none';
-                                        this.textContent = 'Show Details';
-                                    }
-                                }
-                            });
+// Schema comparison functionality
+const SchemaComparison = {
+    createTableRow: function(table) {
+        if (!table || typeof table !== 'object') return null;
+        
+        const rowClass = table.differences ? 'table-row-diff' : 'table-row-same';
+        const row = document.createElement('tr');
+        row.className = rowClass;
+        
+        const tableName = (table.table_name || '').replace(/['"]/g, '');
+        
+        row.innerHTML = [
+            '<td>' + tableName + '</td>',
+            '<td>',
+            table.in_db1 
+                ? '<span class="badge bg-success">Present</span>'
+                : '<span class="badge bg-danger">Missing</span>',
+            '</td>',
+            '<td>',
+            table.in_db2 
+                ? '<span class="badge bg-success">Present</span>'
+                : '<span class="badge bg-danger">Missing</span>',
+            '</td>',
+            '<td>',
+            !table.differences
+                ? '<span class="badge bg-success">Identical</span>'
+                : '<span class="badge bg-warning">Differences Found</span>',
+            '</td>',
+            '<td>',
+            table.in_db1 && table.in_db2 
+                ? '<button class="btn btn-sm btn-outline-primary toggle-details" data-table="' + tableName + '">Show Details</button>'
+                : '<span class="text-muted">Not comparable</span>',
+            '</td>'
+        ].join('');
+        
+        return row;
+    },
+
+    updateProgress: function(progress, processedTables, totalTables, currentTable) {
+        const elements = {
+            progressBar: document.getElementById('progressBar'),
+            progressStatus: document.getElementById('progressStatus'),
+            tableCounter: document.getElementById('tableCounter'),
+            currentTableName: document.getElementById('currentTableName')
+        };
+        
+        // Check if all required elements exist
+        if (!Object.values(elements).every(Boolean)) return;
+        
+        elements.progressBar.style.width = progress + '%';
+        elements.progressBar.setAttribute('aria-valuenow', progress);
+        elements.progressBar.textContent = progress + '%';
+        
+        elements.progressStatus.textContent = currentTable ? 'Processing: ' + currentTable : 'Connecting to databases...';
+        elements.tableCounter.textContent = processedTables + ' of ' + totalTables + ' tables processed';
+        elements.currentTableName.textContent = currentTable || '';
+    },
+
+    fetchResults: function() {
+        fetch('/comparison/schema/status')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.status === 'in_progress') {
+                    SchemaComparison.updateProgress(
+                        data.progress,
+                        data.processed_tables,
+                        data.total_tables,
+                        data.current_table
+                    );
+                    setTimeout(SchemaComparison.fetchResults, 1000);
+                } else if (data.status === 'complete') {
+                    const elements = {
+                        progressCard: document.getElementById('progressCard'),
+                        resultsCard: document.getElementById('resultsCard'),
+                        tbody: document.getElementById('comparisonTableBody')
+                    };
+                    
+                    if (!Object.values(elements).every(Boolean)) return;
+                    
+                    elements.progressCard.style.display = 'none';
+                    elements.resultsCard.style.display = 'block';
+                    
+                    elements.tbody.innerHTML = '';
+                    if (Array.isArray(data.results)) {
+                        data.results.forEach(function(table) {
+                            const row = SchemaComparison.createTableRow(table);
+                            if (row) elements.tbody.appendChild(row);
                         });
                     }
-                })
-                .catch(error => {
-                    console.error('Error fetching comparison results:', error);
-                });
-        }
-
-        // Start fetching comparison results
-        setTimeout(fetchComparisonResults, 1000);
-        {% endif %}
-
-        // Set up filter buttons
-        document.getElementById('showAllTables').addEventListener('click', function() {
-            document.querySelectorAll('.table-row-same, .table-row-diff').forEach(row => {
-                row.style.display = 'table-row';
+                }
+            })
+            .catch(function(error) {
+                console.error('Error fetching comparison results:', error);
             });
-        });
+    }
+};
 
-        document.getElementById('showDifferencesOnly').addEventListener('click', function() {
-            document.querySelectorAll('.table-row-same').forEach(row => {
-                row.style.display = 'none';
-            });
-            document.querySelectorAll('.table-row-diff').forEach(row => {
-                row.style.display = 'table-row';
-            });
-        });
-    });
+// Start fetching comparison results when the script loads
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(SchemaComparison.fetchResults, 1000);
+});
 </script>
+{% endif %}
 {% endblock %}
