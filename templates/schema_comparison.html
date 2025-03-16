@@ -116,23 +116,23 @@
                                         <tbody>
                                             {% for column in table.columns %}
                                             <tr class="{% if column.differences %}table-warning{% endif %}">
-                                                <td>{{ column.name }}</td>
+                                                <td>{{ column.column_name }}</td>
                                                 <td>
                                                     {% if column.in_db1 %}
-                                                        {{ column.db1_type }}
-                                                        {% if column.db1_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
-                                                        {% if column.db1_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
-                                                        {% if column.db1_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                        {{ column.source.formatted_data_type }}
+                                                        {% if column.source.is_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
+                                                        {% if column.source.is_primary_key == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
+                                                        {% if column.source.is_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
                                                     {% else %}
                                                         <span class="badge bg-danger">Missing</span>
                                                     {% endif %}
                                                 </td>
                                                 <td>
                                                     {% if column.in_db2 %}
-                                                        {{ column.db2_type }}
-                                                        {% if column.db2_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
-                                                        {% if column.db2_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
-                                                        {% if column.db2_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                        {{ column.target.formatted_data_type }}
+                                                        {% if column.target.is_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
+                                                        {% if column.target.is_primary_key == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
+                                                        {% if column.target.is_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
                                                     {% else %}
                                                         <span class="badge bg-danger">Missing</span>
                                                     {% endif %}
@@ -191,21 +191,38 @@
             });
         }
         
+        // Track filter state
+        let showDifferencesOnly = false;
+        
+        // Function to apply current filter state to all table rows
+        function applyTableFilter() {
+            const tableRows = document.querySelectorAll('#comparisonTableBody > tr:not(.details-row)');
+            
+            tableRows.forEach(row => {
+                if (showDifferencesOnly) {
+                    // If showing differences only, hide rows without differences
+                    if (row.classList.contains('table-row-same')) {
+                        row.style.display = 'none';
+                    } else {
+                        row.style.display = 'table-row';
+                    }
+                } else {
+                    // Show all rows
+                    row.style.display = 'table-row';
+                }
+            });
+        }
+        
         // Show only differences
         document.getElementById('showDifferencesOnly').addEventListener('click', function() {
-            document.querySelectorAll('.table-row-same').forEach(row => {
-                row.style.display = 'none';
-            });
-            document.querySelectorAll('.table-row-diff').forEach(row => {
-                row.style.display = 'table-row';
-            });
+            showDifferencesOnly = true;
+            applyTableFilter();
         });
         
         // Show all tables
         document.getElementById('showAllTables').addEventListener('click', function() {
-            document.querySelectorAll('.table-row-same, .table-row-diff').forEach(row => {
-                row.style.display = 'table-row';
-            });
+            showDifferencesOnly = false;
+            applyTableFilter();
         });
 
         {% if comparison_in_progress %}
@@ -219,6 +236,7 @@
         // Function to create table row HTML
         function createTableRow(table) {
             const rowClass = table.differences ? 'table-row-diff' : 'table-row-same';
+            
             let html = `
                 <tr class="${rowClass}">
                     <td>${table.table_name}</td>
@@ -265,21 +283,21 @@
                     const columnClass = column.differences ? 'table-warning' : '';
                     html += `
                         <tr class="${columnClass}">
-                            <td>${column.name}</td>
+                            <td>${column.column_name}</td>
                             <td>
                                 ${column.in_db1 
-                                    ? column.db1_type + 
-                                      (column.db1_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
-                                      (column.db1_pk === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
-                                      (column.db1_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
+                                    ? column.source.formatted_data_type + 
+                                      (column.source.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
+                                      (column.source.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
+                                      (column.source.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
                                     : '<span class="badge bg-danger">Missing</span>'}
                             </td>
                             <td>
                                 ${column.in_db2 
-                                    ? column.db2_type + 
-                                      (column.db2_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
-                                      (column.db2_pk === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
-                                      (column.db2_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
+                                    ? column.target.formatted_data_type + 
+                                      (column.target.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
+                                      (column.target.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
+                                      (column.target.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
                                     : '<span class="badge bg-danger">Missing</span>'}
                             </td>
                             <td>
@@ -362,12 +380,22 @@
                         const tableBody = document.getElementById('comparisonTableBody');
                         
                         data.current_batch.forEach(table => {
-                            allTables.push(table);
-                            tableBody.innerHTML += createTableRow(table);
+                            // Check if this table is already in allTables array
+                            const existingTableIndex = allTables.findIndex(t => t.table_name === table.table_name);
+                            if (existingTableIndex === -1) {
+                                // Table doesn't exist yet, add it
+                                allTables.push(table);
+                                
+                                // Add the row HTML
+                                tableBody.innerHTML += createTableRow(table);
+                            }
                         });
                         
                         // Setup toggle details for new rows
                         setupToggleDetails();
+                        
+                        // Apply current filter state to all rows
+                        applyTableFilter();
                         
                         // Show results card if we have data
                         if (allTables.length > 0) {

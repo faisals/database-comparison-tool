@@ -97,6 +97,33 @@ def compare_schemas():
         flash('One or both selected connections do not exist.', 'danger')
         return redirect(url_for('main.index'))
     
+    # Store connection details in session for the AJAX endpoint
+    session['conn1'] = conn1
+    session['conn2'] = conn2
+    
+    return render_template(
+        'schema_comparison.html', 
+        conn1=conn1, 
+        conn2=conn2,
+        comparison_in_progress=True
+    )
+
+@comparison_bp.route('/api/schema_comparison_progress', methods=['GET'])
+def schema_comparison_progress():
+    """API endpoint to get schema comparison progress and results"""
+    from flask import jsonify
+    import time
+    
+    # Get connection details from session
+    conn1 = session.get('conn1')
+    conn2 = session.get('conn2')
+    
+    if not conn1 or not conn2:
+        return jsonify({
+            'status': 'error',
+            'message': 'Connection details not found in session'
+        }), 400
+    
     # Create database connections
     db1 = DatabaseConnection(
         server=conn1['server'],
@@ -116,60 +143,86 @@ def compare_schemas():
     
     # Connect to databases
     if not db1.connect():
-        flash(f'Failed to connect to {conn1_name}. Please check your connection details.', 'danger')
-        return redirect(url_for('main.index'))
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to connect to {conn1["name"]}. Please check your connection details.'
+        }), 500
         
     if not db2.connect():
         db1.disconnect()
-        flash(f'Failed to connect to {conn2_name}. Please check your connection details.', 'danger')
-        return redirect(url_for('main.index'))
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to connect to {conn2["name"]}. Please check your connection details.'
+        }), 500
     
-    # Get all tables from both databases
-    tables1 = db1.get_tables()
-    tables2 = db2.get_tables()
-    
-    # Compare schemas
-    schema_comparison = []
-    all_tables = sorted(set(tables1) | set(tables2))
-    
-    for table_name in all_tables:
-        in_db1 = table_name in tables1
-        in_db2 = table_name in tables2
+    try:
+        # Get all tables from both databases
+        tables1 = db1.get_tables()
+        tables2 = db2.get_tables()
         
-        if in_db1 and in_db2:
-            # Get schema for both tables
-            schema1 = db1.get_table_schema(table_name)
-            schema2 = db2.get_table_schema(table_name)
+        # Compare schemas
+        schema_comparison = []
+        all_tables = sorted(set(tables1) | set(tables2))
+        total_tables = len(all_tables)
+        
+        # Get the offset parameter for pagination
+        offset = request.args.get('offset', 0, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        
+        # Calculate end index, ensuring it doesn't exceed the total
+        end_index = min(offset + limit, total_tables)
+        
+        # Get the subset of tables to process in this batch
+        current_tables = all_tables[offset:end_index]
+        
+        # Process the current batch of tables
+        for table_name in current_tables:
+            in_db1 = table_name in tables1
+            in_db2 = table_name in tables2
             
-            # Compare columns
-            column_comparison = compare_table_schemas(schema1, schema2)
-            
-            schema_comparison.append({
-                'table_name': table_name,
-                'in_db1': True,
-                'in_db2': True,
-                'columns': column_comparison.get('differences', []),
-                'differences': len(column_comparison.get('differences', [])) > 0
-            })
-        else:
-            schema_comparison.append({
-                'table_name': table_name,
-                'in_db1': in_db1,
-                'in_db2': in_db2,
-                'columns': [],
-                'differences': True
-            })
+            if in_db1 and in_db2:
+                # Get schema for both tables
+                schema1 = db1.get_table_schema(table_name)
+                schema2 = db2.get_table_schema(table_name)
+                
+                # Compare columns
+                column_comparison = compare_table_schemas(schema1, schema2)
+                
+                schema_comparison.append({
+                    'table_name': table_name,
+                    'in_db1': True,
+                    'in_db2': True,
+                    'columns': column_comparison.get('differences', []),
+                    'differences': len(column_comparison.get('differences', [])) > 0
+                })
+            else:
+                schema_comparison.append({
+                    'table_name': table_name,
+                    'in_db1': in_db1,
+                    'in_db2': in_db2,
+                    'columns': [],
+                    'differences': True
+                })
+                
+            # Small delay to prevent overwhelming the server
+            time.sleep(0.05)
+        
+        # Calculate progress percentage
+        progress = min(100, int((end_index / total_tables) * 100))
+        
+        return jsonify({
+            'status': 'success',
+            'progress': progress,
+            'total_tables': total_tables,
+            'processed_tables': end_index,
+            'current_batch': schema_comparison,
+            'is_complete': end_index >= total_tables
+        })
     
-    # Disconnect from databases
-    db1.disconnect()
-    db2.disconnect()
-    
-    return render_template(
-        'schema_comparison.html', 
-        conn1=conn1, 
-        conn2=conn2, 
-        schema_comparison=schema_comparison
-    )
+    finally:
+        # Disconnect from databases
+        db1.disconnect()
+        db2.disconnect()
 
 @comparison_bp.route('/select_tables', methods=['GET', 'POST'])
 def select_tables():
