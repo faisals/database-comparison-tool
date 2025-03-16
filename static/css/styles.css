@@ -3,7 +3,8 @@
 /* General styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f5f7fb;
+    background-color: #F5F5F5;
+    color: #333333;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -33,7 +34,8 @@ main {
 }
 
 .table th {
-    background-color: #f8f9fa;
+    background-color: #F5F5F5;
+    color: #333333;
     font-weight: 600;
 }
 
@@ -158,18 +160,18 @@ main {
 
 /* Data comparison results styles */
 .diff-added {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: #4CAF50;
+    color: #fff;
 }
 
 .diff-removed {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: #F44336;
+    color: #fff;
 }
 
 .diff-changed {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: #2196F3;
+    color: #fff;
 }
 
 .diff-count {
@@ -193,7 +195,7 @@ main {
 .diff-table th {
     position: sticky;
     top: 0;
-    background-color: #f8f9fa;
+    background-color: #F5F5F5;
     z-index: 10;
     box-shadow: 0 2px 2px -1px rgba(0,0,0,0.1);
 }
@@ -219,7 +221,7 @@ main {
     top: 0;
     height: 100%;
     width: 3px;
-    background-color: #ffc107;
+    background-color: #2196F3;
 }
 
 .diff-summary-card {
@@ -238,10 +240,52 @@ main {
 }
 
 .diff-filter-container {
-    background-color: #f8f9fa;
+    background-color: #F5F5F5;
     padding: 15px;
     border-radius: 6px;
     margin-bottom: 20px;
+}
+
+/* Schema comparison specific styles */
+.table-row-diff {
+    background-color: rgba(33, 150, 243, 0.1);
+}
+
+.table-row-same {
+    background-color: #F5F5F5;
+}
+
+.schema-status-added {
+    color: #4CAF50;
+}
+
+.schema-status-removed {
+    color: #F44336;
+}
+
+.schema-status-modified {
+    color: #2196F3;
+}
+
+.schema-status-unchanged {
+    color: #333333;
+}
+
+/* Badge colors */
+.badge.bg-success {
+    background-color: #4CAF50 !important;
+}
+
+.badge.bg-danger {
+    background-color: #F44336 !important;
+}
+
+.badge.bg-warning {
+    background-color: #2196F3 !important;
+}
+
+.badge.bg-info {
+    background-color: #2196F3 !important;
 }
 
 /* Feature icon styles for index page */
@@ -304,8 +348,8 @@ main {
     }
     
     .card-header {
-        background-color: #f8f9fa !important;
-        color: #212529 !important;
+        background-color: #F5F5F5 !important;
+        color: #333333 !important;
         border-bottom: 2px solid #dee2e6 !important;
     }
     

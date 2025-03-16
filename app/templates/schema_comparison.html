@@ -13,7 +13,7 @@
     </nav>
 
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header text-white" style="background-color: #2196F3;">
             <h5 class="card-title mb-0">Database Schema Comparison</h5>
         </div>
         <div class="card-body">
@@ -33,7 +33,7 @@
     {% if comparison_in_progress %}
     <!-- Progress Section -->
     <div class="card mb-4" id="progressCard">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header text-white" style="background-color: #2196F3;">
             <h5 class="card-title mb-0">Comparison Progress</h5>
         </div>
         <div class="card-body">
@@ -51,17 +51,17 @@
     {% endif %}
     
     <div class="card mb-4" id="resultsCard" {% if comparison_in_progress %}style="display: none;"{% endif %}>
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #2196F3;">
             <h5 class="card-title mb-0">Tables Comparison Summary</h5>
             <div>
                 <button class="btn btn-sm btn-light" id="showAllTables">Show All Tables</button>
-                <button class="btn btn-sm btn-warning" id="showDifferencesOnly">Show Differences Only</button>
+                <button class="btn btn-sm btn-light" id="showDifferencesOnly">Show Differences Only</button>
             </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablesComparisonTable">
-                    <thead class="table-dark">
+                <table class="table table-hover" id="tablesComparisonTable">
+                    <thead style="background-color: #F5F5F5; color: #333333;">
                         <tr>
                             <th>Table Name</th>
                             <th>Source Database</th>
@@ -98,7 +98,7 @@
                             </td>
                             <td>
                                 {% if table.in_db1 and table.in_db2 %}
-                                    <button class="btn btn-sm btn-primary toggle-details" data-table="{{ table.table_name }}">
+                                    <button class="btn btn-sm btn-outline-primary toggle-details" data-table="{{ table.table_name }}">
                                         Show Details
                                     </button>
                                 {% else %}
@@ -111,7 +111,7 @@
                             <td colspan="5">
                                 <div class="table-responsive">
                                     <table class="table table-sm">
-                                        <thead class="table-secondary">
+                                        <thead style="background-color: #F5F5F5; color: #333333;">
                                             <tr>
                                                 <th>Column Name</th>
                                                 <th>Source Database</th>
@@ -125,7 +125,7 @@
                                                 <td>{{ column.name }}</td>
                                                 <td>
                                                     {% if column.in_db1 %}
-                                                        {{ column.db1_type }}
+                                                        <span class="schema-status-unchanged">{{ column.db1_type }}</span>
                                                         {% if column.db1_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
                                                         {% if column.db1_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
                                                         {% if column.db1_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
@@ -135,7 +135,7 @@
                                                 </td>
                                                 <td>
                                                     {% if column.in_db2 %}
-                                                        {{ column.db2_type }}
+                                                        <span class="schema-status-unchanged">{{ column.db2_type }}</span>
                                                         {% if column.db2_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
                                                         {% if column.db2_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
                                                         {% if column.db2_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
@@ -184,10 +184,12 @@
         document.querySelectorAll('.toggle-details').forEach(button => {
             button.addEventListener('click', function() {
                 const tableName = this.dataset.table;
-                const detailsRow = document.getElementById('details-' + tableName.replace(/[ .]/g, '_'));
+                const detailsId = `details-${tableName.replace(/[ .]/g, '_')}`;
+                const detailsRow = document.getElementById(detailsId);
+                
                 if (detailsRow) {
                     if (detailsRow.style.display === 'none') {
-                        detailsRow.style.display = 'table-row';
+                        detailsRow.style.display = '';
                         this.textContent = 'Hide Details';
                     } else {
                         detailsRow.style.display = 'none';
@@ -199,33 +201,35 @@
 
         {% if comparison_in_progress %}
         function createTableRow(table) {
-            return `
-                <tr class="${table.differences ? 'table-row-diff' : 'table-row-same'}">
-                    <td>${table.table_name}</td>
-                    <td>
-                        ${table.in_db1 
-                            ? '<span class="badge bg-success">Present</span>' 
-                            : '<span class="badge bg-danger">Missing</span>'}
-                    </td>
-                    <td>
-                        ${table.in_db2 
-                            ? '<span class="badge bg-success">Present</span>' 
-                            : '<span class="badge bg-danger">Missing</span>'}
-                    </td>
-                    <td>
-                        ${!table.differences 
-                            ? '<span class="badge bg-success">Identical</span>' 
-                            : '<span class="badge bg-warning">Differences Found</span>'}
-                    </td>
-                    <td>
-                        ${table.in_db1 && table.in_db2 
-                            ? `<button class="btn btn-sm btn-primary toggle-details" data-table="${table.table_name}">
-                                Show Details
-                               </button>`
-                            : '<span class="text-muted">Not comparable</span>'}
-                    </td>
-                </tr>
+            const rowClass = table.differences ? 'table-row-diff' : 'table-row-same';
+            const row = document.createElement('tr');
+            row.className = rowClass;
+            
+            row.innerHTML = `
+                <td>${table.table_name}</td>
+                <td>
+                    ${table.in_db1 
+                        ? '<span class="badge bg-success">Present</span>'
+                        : '<span class="badge bg-danger">Missing</span>'}
+                </td>
+                <td>
+                    ${table.in_db2 
+                        ? '<span class="badge bg-success">Present</span>'
+                        : '<span class="badge bg-danger">Missing</span>'}
+                </td>
+                <td>
+                    ${!table.differences
+                        ? '<span class="badge bg-success">Identical</span>'
+                        : '<span class="badge bg-warning">Differences Found</span>'}
+                </td>
+                <td>
+                    ${table.in_db1 && table.in_db2 
+                        ? '<button class="btn btn-sm btn-outline-primary toggle-details" data-table="' + table.table_name + '">Show Details</button>'
+                        : '<span class="text-muted">Not comparable</span>'}
+                </td>
             `;
+            
+            return row;
         }
 
         function updateProgress(progress, processedTables, totalTables, currentTable) {
@@ -260,16 +264,18 @@
                         document.getElementById('resultsCard').style.display = 'block';
                         
                         const tbody = document.getElementById('comparisonTableBody');
-                        tbody.innerHTML = data.results.map(table => createTableRow(table)).join('');
+                        tbody.innerHTML = '';
+                        data.results.forEach(table => tbody.appendChild(createTableRow(table)));
                         
                         // Reinitialize toggle details buttons
                         document.querySelectorAll('.toggle-details').forEach(button => {
                             button.addEventListener('click', function() {
                                 const tableName = this.dataset.table;
-                                const detailsRow = document.getElementById('details-' + tableName.replace(/[ .]/g, '_'));
+                                const detailsId = `details-${tableName.replace(/[ .]/g, '_')}`;
+                                const detailsRow = document.getElementById(detailsId);
                                 if (detailsRow) {
                                     if (detailsRow.style.display === 'none') {
-                                        detailsRow.style.display = 'table-row';
+                                        detailsRow.style.display = '';
                                         this.textContent = 'Hide Details';
                                     } else {
                                         detailsRow.style.display = 'none';
