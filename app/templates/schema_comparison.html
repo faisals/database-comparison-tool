@@ -4,11 +4,17 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <h1>Database Schema Comparison</h1>
-    
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('comparison.select_comparison_type') }}">Compare</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Schema Comparison</li>
+        </ol>
+    </nav>
+
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Compared Databases</h5>
+            <h5 class="card-title mb-0">Database Schema Comparison</h5>
         </div>
         <div class="card-body">
             <div class="row">
@@ -27,7 +33,7 @@
     {% if comparison_in_progress %}
     <!-- Progress Section -->
     <div class="card mb-4" id="progressCard">
-        <div class="card-header bg-info text-white">
+        <div class="card-header bg-primary text-white">
             <h5 class="card-title mb-0">Comparison Progress</h5>
         </div>
         <div class="card-body">
@@ -45,7 +51,7 @@
     {% endif %}
     
     <div class="card mb-4" id="resultsCard" {% if comparison_in_progress %}style="display: none;"{% endif %}>
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Tables Comparison Summary</h5>
             <div>
                 <button class="btn btn-sm btn-light" id="showAllTables">Show All Tables</button>
@@ -171,15 +177,15 @@
 </div>
 
 {% block scripts %}
+{{ super() }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Toggle details rows
-        function setupToggleDetails() {
-            document.querySelectorAll('.toggle-details').forEach(button => {
-                button.addEventListener('click', function() {
-                    const tableName = this.getAttribute('data-table');
-                    const detailsRow = document.getElementById('details-' + tableName.replace(/\s/g, '_').replace(/\./g, '_'));
-                    
+        document.querySelectorAll('.toggle-details').forEach(button => {
+            button.addEventListener('click', function() {
+                const tableName = this.dataset.table;
+                const detailsRow = document.getElementById('details-' + tableName.replace(/[ .]/g, '_'));
+                if (detailsRow) {
                     if (detailsRow.style.display === 'none') {
                         detailsRow.style.display = 'table-row';
                         this.textContent = 'Hide Details';
@@ -187,40 +193,14 @@
                         detailsRow.style.display = 'none';
                         this.textContent = 'Show Details';
                     }
-                });
-            });
-        }
-        
-        // Show only differences
-        document.getElementById('showDifferencesOnly').addEventListener('click', function() {
-            document.querySelectorAll('.table-row-same').forEach(row => {
-                row.style.display = 'none';
-            });
-            document.querySelectorAll('.table-row-diff').forEach(row => {
-                row.style.display = 'table-row';
-            });
-        });
-        
-        // Show all tables
-        document.getElementById('showAllTables').addEventListener('click', function() {
-            document.querySelectorAll('.table-row-same, .table-row-diff').forEach(row => {
-                row.style.display = 'table-row';
+                }
             });
         });
 
         {% if comparison_in_progress %}
-        // Dynamic loading of comparison results
-        let offset = 0;
-        const limit = 5; // Number of tables to process in each batch
-        let allTables = [];
-        let totalTables = 0;
-        let isComplete = false;
-
-        // Function to create table row HTML
         function createTableRow(table) {
-            const rowClass = table.differences ? 'table-row-diff' : 'table-row-same';
-            let html = `
-                <tr class="${rowClass}">
+            return `
+                <tr class="${table.differences ? 'table-row-diff' : 'table-row-same'}">
                     <td>${table.table_name}</td>
                     <td>
                         ${table.in_db1 
@@ -239,69 +219,15 @@
                     </td>
                     <td>
                         ${table.in_db1 && table.in_db2 
-                            ? '<button class="btn btn-sm btn-primary toggle-details" data-table="' + table.table_name + '">Show Details</button>' 
+                            ? `<button class="btn btn-sm btn-primary toggle-details" data-table="${table.table_name}">
+                                Show Details
+                               </button>`
                             : '<span class="text-muted">Not comparable</span>'}
                     </td>
-                </tr>`;
-                
-            if (table.in_db1 && table.in_db2) {
-                const safeTableName = table.table_name.replace(/\s/g, '_').replace(/\./g, '_');
-                html += `
-                    <tr class="details-row" id="details-${safeTableName}" style="display: none;">
-                        <td colspan="5">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead class="table-secondary">
-                                        <tr>
-                                            <th>Column Name</th>
-                                            <th>Source Database</th>
-                                            <th>Target Database</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>`;
-                
-                table.columns.forEach(column => {
-                    const columnClass = column.differences ? 'table-warning' : '';
-                    html += `
-                        <tr class="${columnClass}">
-                            <td>${column.name}</td>
-                            <td>
-                                ${column.in_db1 
-                                    ? column.db1_type + 
-                                      (column.db1_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
-                                      (column.db1_pk === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
-                                      (column.db1_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
-                                    : '<span class="badge bg-danger">Missing</span>'}
-                            </td>
-                            <td>
-                                ${column.in_db2 
-                                    ? column.db2_type + 
-                                      (column.db2_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
-                                      (column.db2_pk === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
-                                      (column.db2_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
-                                    : '<span class="badge bg-danger">Missing</span>'}
-                            </td>
-                            <td>
-                                ${!column.differences 
-                                    ? '<span class="badge bg-success">Identical</span>' 
-                                    : '<span class="badge bg-warning">Different</span>'}
-                            </td>
-                        </tr>`;
-                });
-                
-                html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        </td>
-                    </tr>`;
-            }
-            
-            return html;
+                </tr>
+            `;
         }
 
-        // Function to update progress UI
         function updateProgress(progress, processedTables, totalTables, currentTable) {
             const progressBar = document.getElementById('progressBar');
             const progressStatus = document.getElementById('progressStatus');
@@ -312,96 +238,72 @@
             progressBar.setAttribute('aria-valuenow', progress);
             progressBar.textContent = progress + '%';
             
-            tableCounter.textContent = processedTables + ' of ' + totalTables + ' tables processed';
-            
-            if (currentTable) {
-                progressStatus.textContent = 'Processing table: ' + currentTable;
-                currentTableName.textContent = currentTable;
-            } else {
-                progressStatus.textContent = 'Initializing comparison...';
-                currentTableName.textContent = '';
-            }
-            
-            if (progress >= 100) {
-                progressStatus.textContent = 'Comparison complete!';
-                currentTableName.textContent = '';
-                
-                // Hide progress card after a delay
-                setTimeout(() => {
-                    document.getElementById('progressCard').style.display = 'none';
-                }, 2000);
-            }
+            progressStatus.textContent = currentTable ? `Processing: ${currentTable}` : 'Connecting to databases...';
+            tableCounter.textContent = `${processedTables} of ${totalTables} tables processed`;
+            currentTableName.textContent = currentTable || '';
         }
 
-        // Function to fetch comparison results
         function fetchComparisonResults() {
-            if (isComplete) return;
-            
-            const url = `/comparison/api/schema_comparison_progress?offset=${offset}&limit=${limit}`;
-            
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+            fetch('/comparison/schema/status')
+                .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        totalTables = data.total_tables;
-                        
-                        // Update progress
+                    if (data.status === 'in_progress') {
                         updateProgress(
-                            data.progress, 
-                            data.processed_tables, 
+                            data.progress,
+                            data.processed_tables,
                             data.total_tables,
-                            data.current_batch.length > 0 ? data.current_batch[data.current_batch.length - 1].table_name : null
+                            data.current_table
                         );
+                        setTimeout(fetchComparisonResults, 1000);
+                    } else if (data.status === 'complete') {
+                        document.getElementById('progressCard').style.display = 'none';
+                        document.getElementById('resultsCard').style.display = 'block';
                         
-                        // Add tables to the results table
-                        const tableBody = document.getElementById('comparisonTableBody');
+                        const tbody = document.getElementById('comparisonTableBody');
+                        tbody.innerHTML = data.results.map(table => createTableRow(table)).join('');
                         
-                        data.current_batch.forEach(table => {
-                            allTables.push(table);
-                            tableBody.innerHTML += createTableRow(table);
+                        // Reinitialize toggle details buttons
+                        document.querySelectorAll('.toggle-details').forEach(button => {
+                            button.addEventListener('click', function() {
+                                const tableName = this.dataset.table;
+                                const detailsRow = document.getElementById('details-' + tableName.replace(/[ .]/g, '_'));
+                                if (detailsRow) {
+                                    if (detailsRow.style.display === 'none') {
+                                        detailsRow.style.display = 'table-row';
+                                        this.textContent = 'Hide Details';
+                                    } else {
+                                        detailsRow.style.display = 'none';
+                                        this.textContent = 'Show Details';
+                                    }
+                                }
+                            });
                         });
-                        
-                        // Setup toggle details for new rows
-                        setupToggleDetails();
-                        
-                        // Show results card if we have data
-                        if (allTables.length > 0) {
-                            document.getElementById('resultsCard').style.display = 'block';
-                        }
-                        
-                        // Update offset for next batch
-                        offset += data.current_batch.length;
-                        
-                        // Check if we're done
-                        isComplete = data.is_complete;
-                        
-                        if (!isComplete) {
-                            // Continue fetching more results
-                            setTimeout(fetchComparisonResults, 500);
-                        }
-                    } else {
-                        console.error('Error:', data.message);
-                        document.getElementById('progressStatus').textContent = 'Error: ' + data.message;
                     }
                 })
                 .catch(error => {
-                    console.error('Fetch error:', error);
-                    document.getElementById('progressStatus').textContent = 'Error: ' + error.message;
+                    console.error('Error fetching comparison results:', error);
                 });
         }
 
         // Start fetching comparison results
         setTimeout(fetchComparisonResults, 1000);
-        {% else %}
-        // Set up toggle details for static content
-        setupToggleDetails();
         {% endif %}
+
+        // Set up filter buttons
+        document.getElementById('showAllTables').addEventListener('click', function() {
+            document.querySelectorAll('.table-row-same, .table-row-diff').forEach(row => {
+                row.style.display = 'table-row';
+            });
+        });
+
+        document.getElementById('showDifferencesOnly').addEventListener('click', function() {
+            document.querySelectorAll('.table-row-same').forEach(row => {
+                row.style.display = 'none';
+            });
+            document.querySelectorAll('.table-row-diff').forEach(row => {
+                row.style.display = 'table-row';
+            });
+        });
     });
 </script>
-{% endblock %}
 {% endblock %}
