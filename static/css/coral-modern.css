@@ -1,0 +1,363 @@
+/* CORAL - Modern Minimal Design
+   A clean, professional design system for database comparison tool
+*/
+
+/* Base Styles and Typography */
+:root {
+  --bg-color: #F5F5F5;
+  --text-color: #333333;
+  --primary-color: #2196F3;
+  --success-color: #4CAF50;
+  --danger-color: #F44336;
+  --warning-color: #FFC107;
+  --light-color: #FFFFFF;
+  --border-color: #E0E0E0;
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
+  --border-radius: 8px;
+  --transition: all 0.2s ease-in-out;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+/* Card Layout System */
+.coral-card {
+  background-color: var(--light-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+  border: none;
+  transition: var(--transition);
+}
+
+.coral-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.coral-card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--light-color);
+  border-top-left-radius: var(--border-radius);
+  border-top-right-radius: var(--border-radius);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coral-card-body {
+  padding: 1.25rem;
+}
+
+/* Comparison Status Indicators */
+.status-badge {
+  display: inline-block;
+  padding: 0.35em 0.65em;
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+}
+
+.status-added {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.status-deleted {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.status-modified {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.status-unchanged {
+  background-color: #E0E0E0;
+  color: var(--text-color);
+}
+
+/* Table Styles */
+.coral-table {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+  border-collapse: collapse;
+}
+
+.coral-table th {
+  position: sticky;
+  top: 0;
+  background-color: var(--light-color);
+  z-index: 10;
+  padding: 0.75rem;
+  vertical-align: top;
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 500;
+}
+
+.coral-table td {
+  padding: 0.75rem;
+  vertical-align: top;
+  border-top: 1px solid var(--border-color);
+}
+
+.coral-table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.coral-table-hover tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.coral-table-responsive {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Difference Highlighting */
+.diff-added {
+  background-color: rgba(76, 175, 80, 0.1) !important;
+  border-left: 3px solid var(--success-color) !important;
+}
+
+.diff-deleted {
+  background-color: rgba(244, 67, 54, 0.1) !important;
+  border-left: 3px solid var(--danger-color) !important;
+}
+
+.diff-modified {
+  background-color: rgba(33, 150, 243, 0.1) !important;
+  border-left: 3px solid var(--primary-color) !important;
+}
+
+.diff-cell-modified {
+  background-color: rgba(33, 150, 243, 0.1);
+  position: relative;
+}
+
+.diff-cell-added {
+  background-color: rgba(76, 175, 80, 0.1);
+  position: relative;
+}
+
+.diff-cell-deleted {
+  background-color: rgba(244, 67, 54, 0.1);
+  position: relative;
+}
+
+/* Collapsible Sections */
+.collapsible-section {
+  margin-bottom: 1rem;
+}
+
+.collapsible-header {
+  background-color: var(--light-color);
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.collapsible-header:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.collapsible-content {
+  background-color: var(--light-color);
+  padding: 1rem;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  margin-top: 2px;
+  display: none;
+}
+
+.collapsible-header.active {
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+/* Summary Cards */
+.summary-stat {
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--light-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.summary-stat-value {
+  font-size: 2rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.summary-stat-label {
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+/* Buttons and Controls */
+.coral-btn {
+  display: inline-block;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: 0.25rem;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.coral-btn-primary {
+  color: white;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.coral-btn-primary:hover {
+  background-color: #1976D2;
+  border-color: #1976D2;
+}
+
+.coral-btn-outline {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.coral-btn-outline:hover {
+  color: white;
+  background-color: var(--primary-color);
+}
+
+.coral-btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: var(--primary-color);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+/* Tooltips */
+.coral-tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.coral-tooltip .tooltip-text {
+  visibility: hidden;
+  width: 200px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 0.875rem;
+}
+
+.coral-tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Footer */
+.coral-footer {
+  padding: 1rem 0;
+  text-align: center;
+  color: #6C757D;
+  font-size: 0.875rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .summary-stat {
+    margin-bottom: 1rem;
+  }
+  
+  .coral-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .coral-card-header .actions {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+}

@@ -1,24 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}Schema Comparison Results{% endblock %}
+{% block title %}CORAL - Schema Comparison Results{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <h1>Database Schema Comparison</h1>
+    <h1 class="mb-4">Database Schema Comparison</h1>
     
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Compared Databases</h5>
+    <!-- Comparison Details Card -->
+    <div class="coral-card mb-4">
+        <div class="coral-card-header">
+            <h4 class="mb-0">Comparison Details</h4>
         </div>
-        <div class="card-body">
+        <div class="coral-card-body">
             <div class="row">
                 <div class="col-md-6">
                     <h6>Source Database:</h6>
-                    <p><strong>{{ conn1.name }}</strong> ({{ conn1.server }}/{{ conn1.database }})</p>
+                    <p><strong>{{ conn1.name }}</strong> <span class="text-muted">({{ conn1.server }}/{{ conn1.database }})</span></p>
                 </div>
                 <div class="col-md-6">
                     <h6>Target Database:</h6>
-                    <p><strong>{{ conn2.name }}</strong> ({{ conn2.server }}/{{ conn2.database }})</p>
+                    <p><strong>{{ conn2.name }}</strong> <span class="text-muted">({{ conn2.server }}/{{ conn2.database }})</span></p>
                 </div>
             </div>
         </div>
@@ -26,77 +27,107 @@
     
     {% if comparison_in_progress %}
     <!-- Progress Section -->
-    <div class="card mb-4" id="progressCard">
-        <div class="card-header bg-info text-white">
-            <h5 class="card-title mb-0">Comparison Progress</h5>
+    <div class="coral-card mb-4" id="progressCard">
+        <div class="coral-card-header">
+            <h4 class="mb-0">Comparison Progress</h4>
         </div>
-        <div class="card-body">
+        <div class="coral-card-body">
             <div class="progress mb-3" style="height: 25px;">
                 <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                     role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                     role="progressbar" style="width: 0%; background-color: #2196F3;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
             </div>
             <div class="d-flex justify-content-between">
                 <p id="progressStatus">Connecting to databases...</p>
                 <p id="tableCounter">0 of 0 tables processed</p>
             </div>
-            <div id="currentTableName" class="text-center font-weight-bold"></div>
+            <div id="currentTableName" class="text-center fw-bold"></div>
         </div>
     </div>
     {% endif %}
     
-    <div class="card mb-4" id="resultsCard" {% if comparison_in_progress %}style="display: none;"{% endif %}>
-        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">Tables Comparison Summary</h5>
-            <div>
-                <button class="btn btn-sm btn-light" id="showAllTables">Show All Tables</button>
-                <button class="btn btn-sm btn-warning" id="showDifferencesOnly">Show Differences Only</button>
+    <!-- Tables Comparison Summary Card -->
+    <div class="coral-card mb-4" id="resultsCard" {% if comparison_in_progress %}style="display: none;"{% endif %}>
+        <div class="coral-card-header">
+            <h4 class="mb-0">Tables Comparison Summary</h4>
+            <div class="actions">
+                <div class="form-check form-switch d-inline-block me-3">
+                    <input class="form-check-input" type="checkbox" id="toggleDifferencesOnly">
+                    <label class="form-check-label" for="toggleDifferencesOnly">Show Differences Only</label>
+                </div>
+                <button class="btn btn-sm btn-outline-secondary" id="showAllTables">
+                    <i class="bi bi-table"></i> All Tables
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="showDifferencesOnly">
+                    <i class="bi bi-filter"></i> Differences
+                </button>
             </div>
         </div>
-        <div class="card-body">
+        <div class="coral-card-body">
             <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablesComparisonTable">
-                    <thead class="table-dark">
+                <table class="coral-table coral-table-striped coral-table-hover" id="tablesComparisonTable">
+                    <thead>
                         <tr>
                             <th>Table Name</th>
-                            <th>Source Database</th>
-                            <th>Target Database</th>
-                            <th>Status</th>
-                            <th>Details</th>
+                            <th class="coral-tooltip">
+                                Source Database
+                                <span class="tooltip-text">Presence in source database</span>
+                            </th>
+                            <th class="coral-tooltip">
+                                Target Database
+                                <span class="tooltip-text">Presence in target database</span>
+                            </th>
+                            <th class="coral-tooltip">
+                                Status
+                                <span class="tooltip-text">Comparison result status</span>
+                            </th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="comparisonTableBody">
                         {% if not comparison_in_progress %}
                         {% for table in schema_comparison %}
-                        <tr class="{% if table.differences %}table-row-diff{% else %}table-row-same{% endif %}">
+                        <tr class="{% if table.differences %}diff-modified{% else %}{% endif %} table-row-{% if table.differences %}diff{% else %}same{% endif %}">
                             <td>{{ table.table_name }}</td>
                             <td>
                                 {% if table.in_db1 %}
-                                    <span class="badge bg-success">Present</span>
+                                    <span class="status-badge status-unchanged">
+                                        <i class="bi bi-check-circle-fill"></i> Present
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-danger">Missing</span>
+                                    <span class="status-badge status-deleted">
+                                        <i class="bi bi-x-circle-fill"></i> Missing
+                                    </span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if table.in_db2 %}
-                                    <span class="badge bg-success">Present</span>
+                                    <span class="status-badge status-unchanged">
+                                        <i class="bi bi-check-circle-fill"></i> Present
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-danger">Missing</span>
+                                    <span class="status-badge status-deleted">
+                                        <i class="bi bi-x-circle-fill"></i> Missing
+                                    </span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if not table.differences %}
-                                    <span class="badge bg-success">Identical</span>
+                                    <span class="status-badge status-unchanged">
+                                        <i class="bi bi-check-circle-fill"></i> Identical
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-warning">Differences Found</span>
+                                    <span class="status-badge status-modified">
+                                        <i class="bi bi-exclamation-circle-fill"></i> Differences
+                                    </span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if table.in_db1 and table.in_db2 %}
-                                    <button class="btn btn-sm btn-primary toggle-details" data-table="{{ table.table_name }}">
-                                        Show Details
+                                    <button class="btn btn-sm btn-outline-primary toggle-details" data-table="{{ table.table_name }}">
+                                        <i class="bi bi-list-ul"></i> Details
                                     </button>
-                                    <button class="btn btn-sm btn-secondary view-create-script" data-table="{{ table.table_name }}">
-                                        View CREATE Script
+                                    <button class="btn btn-sm btn-outline-secondary view-create-script" data-table="{{ table.table_name }}">
+                                        <i class="bi bi-code-slash"></i> SQL
                                     </button>
                                 {% else %}
                                     <span class="text-muted">Not comparable</span>
@@ -107,8 +138,8 @@
                         <tr class="details-row" id="details-{{ table.table_name|replace(' ', '_')|replace('.', '_') }}" style="display: none;">
                             <td colspan="5">
                                 <div class="table-responsive">
-                                    <table class="table table-sm">
-                                        <thead class="table-secondary">
+                                    <table class="coral-table coral-table-striped">
+                                        <thead>
                                             <tr>
                                                 <th>Column Name</th>
                                                 <th>Source Database</th>
@@ -118,33 +149,37 @@
                                         </thead>
                                         <tbody>
                                             {% for column in table.columns %}
-                                            <tr class="{% if column.differences %}table-warning{% endif %}">
+                                            <tr class="{% if column.differences %}diff-modified{% endif %}">
                                                 <td>{{ column.column_name }}</td>
                                                 <td>
                                                     {% if column.in_db1 %}
                                                         {{ column.source.formatted_data_type }}
-                                                        {% if column.source.is_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
-                                                        {% if column.source.is_primary_key == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
-                                                        {% if column.source.is_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                        {% if column.source.is_nullable == 'No' %}<span class="status-badge status-unchanged">NOT NULL</span>{% endif %}
+                                                        {% if column.source.is_primary_key == 'Yes' %}<span class="status-badge" style="background-color: #2196F3;">PK</span>{% endif %}
+                                                        {% if column.source.is_identity == 'Yes' %}<span class="status-badge" style="background-color: #333333;">Identity</span>{% endif %}
                                                     {% else %}
-                                                        <span class="badge bg-danger">Missing</span>
+                                                        <span class="status-badge status-deleted">Missing</span>
                                                     {% endif %}
                                                 </td>
                                                 <td>
                                                     {% if column.in_db2 %}
                                                         {{ column.target.formatted_data_type }}
-                                                        {% if column.target.is_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
-                                                        {% if column.target.is_primary_key == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
-                                                        {% if column.target.is_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                        {% if column.target.is_nullable == 'No' %}<span class="status-badge status-unchanged">NOT NULL</span>{% endif %}
+                                                        {% if column.target.is_primary_key == 'Yes' %}<span class="status-badge" style="background-color: #2196F3;">PK</span>{% endif %}
+                                                        {% if column.target.is_identity == 'Yes' %}<span class="status-badge" style="background-color: #333333;">Identity</span>{% endif %}
                                                     {% else %}
-                                                        <span class="badge bg-danger">Missing</span>
+                                                        <span class="status-badge status-deleted">Missing</span>
                                                     {% endif %}
                                                 </td>
                                                 <td>
                                                     {% if not column.differences %}
-                                                        <span class="badge bg-success">Identical</span>
+                                                        <span class="status-badge status-unchanged">
+                                                            <i class="bi bi-check-circle-fill"></i> Identical
+                                                        </span>
                                                     {% else %}
-                                                        <span class="badge bg-warning">Different</span>
+                                                        <span class="status-badge status-modified">
+                                                            <i class="bi bi-exclamation-circle-fill"></i> Different
+                                                        </span>
                                                     {% endif %}
                                                 </td>
                                             </tr>
@@ -172,31 +207,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="d-flex justify-content-end mb-3">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-primary active" id="viewDiffBtn">View Diff</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="viewSourceBtn">View Source</button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="viewTargetBtn">View Target</button>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Source Database Script</h6>
+                            <pre id="sourceScript" class="p-3 bg-light border rounded" style="max-height: 400px; overflow-y: auto;"></pre>
                         </div>
-                    </div>
-                    
-                    <div id="scriptDiffView">
-                        <div class="alert alert-info" id="loadingScripts">
-                            Loading scripts, please wait...
+                        <div class="col-md-6">
+                            <h6>Target Database Script</h6>
+                            <pre id="targetScript" class="p-3 bg-light border rounded" style="max-height: 400px; overflow-y: auto;"></pre>
                         </div>
-                        <div id="diffContent" style="display: none;">
-                            <!-- Diff content will be loaded here -->
-                        </div>
-                    </div>
-                    
-                    <div id="scriptSourceView" style="display: none;">
-                        <h6 class="mb-2">Source Database Script:</h6>
-                        <pre class="bg-light p-3 border rounded"><code id="sourceScript"></code></pre>
-                    </div>
-                    
-                    <div id="scriptTargetView" style="display: none;">
-                        <h6 class="mb-2">Target Database Script:</h6>
-                        <pre class="bg-light p-3 border rounded"><code id="targetScript"></code></pre>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -205,147 +224,109 @@
             </div>
         </div>
     </div>
-    
-    <div class="d-flex justify-content-between mb-4">
-        <a href="{{ url_for('comparison.select_comparison_type') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Comparison Type
-        </a>
-        <a href="{{ url_for('main.index') }}" class="btn btn-primary">
-            <i class="fas fa-home"></i> Return to Home
-        </a>
-    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Toggle details rows
         function setupToggleDetails() {
             document.querySelectorAll('.toggle-details').forEach(button => {
                 button.addEventListener('click', function() {
                     const tableName = this.getAttribute('data-table');
-                    const detailsRow = document.getElementById('details-' + tableName.replace(/\s/g, '_').replace(/\./g, '_'));
+                    const detailsId = `details-${tableName.replace(/\s/g, '_').replace(/\./g, '_')}`;
+                    const detailsRow = document.getElementById(detailsId);
                     
-                    if (detailsRow.style.display === 'none') {
+                    if (detailsRow.style.display === 'none' || detailsRow.style.display === '') {
                         detailsRow.style.display = 'table-row';
-                        this.textContent = 'Hide Details';
+                        this.innerHTML = '<i class="bi bi-dash-lg"></i> Hide';
+                        this.classList.remove('btn-outline-primary');
+                        this.classList.add('btn-primary');
                     } else {
                         detailsRow.style.display = 'none';
-                        this.textContent = 'Show Details';
+                        this.innerHTML = '<i class="bi bi-list-ul"></i> Details';
+                        this.classList.remove('btn-primary');
+                        this.classList.add('btn-outline-primary');
                     }
                 });
             });
         }
+        
+        // Toggle details rows
+        setupToggleDetails();
         
         // Set up CREATE TABLE script comparison
         document.querySelectorAll('.view-create-script').forEach(button => {
             button.addEventListener('click', function() {
                 const tableName = this.getAttribute('data-table');
                 
+                // Show loading state
+                document.getElementById('sourceScript').textContent = 'Loading...';
+                document.getElementById('targetScript').textContent = 'Loading...';
+                
                 // Show the modal
-                const modal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
-                modal.show();
+                const scriptModal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
+                scriptModal.show();
                 
-                // Update modal title
-                document.getElementById('scriptComparisonModalLabel').textContent = 
-                    `CREATE TABLE Script Comparison: ${tableName}`;
-                
-                // Show loading indicator
-                document.getElementById('loadingScripts').style.display = 'block';
-                document.getElementById('diffContent').style.display = 'none';
-                
-                // Reset views
-                document.getElementById('scriptDiffView').style.display = 'block';
-                document.getElementById('scriptSourceView').style.display = 'none';
-                document.getElementById('scriptTargetView').style.display = 'none';
-                
-                // Set active button
-                document.getElementById('viewDiffBtn').classList.add('active');
-                document.getElementById('viewSourceBtn').classList.remove('active');
-                document.getElementById('viewTargetBtn').classList.remove('active');
-                
-                // Fetch the CREATE TABLE scripts
-                fetch(`/comparison/api/create_table_script/${tableName}`)
+                // Fetch the scripts
+                fetch(`/comparison/schema/scripts/${tableName}`)
                     .then(response => response.json())
                     .then(data => {
-                        if (data.status === 'success') {
-                            const comparison = data.comparison;
-                            
-                            // Update the diff view
-                            document.getElementById('diffContent').innerHTML = comparison.diff_html;
-                            document.getElementById('loadingScripts').style.display = 'none';
-                            document.getElementById('diffContent').style.display = 'block';
-                            
-                            // Update source and target views
-                            document.getElementById('sourceScript').textContent = comparison.source_script;
-                            document.getElementById('targetScript').textContent = comparison.target_script;
-                        } else {
-                            document.getElementById('loadingScripts').innerHTML = 
-                                `<div class="alert alert-danger">Error: ${data.message}</div>`;
-                        }
+                        document.getElementById('sourceScript').textContent = data.source_script || 'No script available';
+                        document.getElementById('targetScript').textContent = data.target_script || 'No script available';
+                        
+                        // Update modal title
+                        document.getElementById('scriptComparisonModalLabel').textContent = `CREATE TABLE Script: ${tableName}`;
                     })
                     .catch(error => {
-                        document.getElementById('loadingScripts').innerHTML = 
-                            `<div class="alert alert-danger">Error fetching scripts: ${error.message}</div>`;
+                        console.error('Error fetching scripts:', error);
+                        document.getElementById('sourceScript').textContent = 'Error loading script';
+                        document.getElementById('targetScript').textContent = 'Error loading script';
                     });
             });
         });
         
-        // Set up view toggle buttons in the modal
-        document.getElementById('viewDiffBtn').addEventListener('click', function() {
-            document.getElementById('scriptDiffView').style.display = 'block';
-            document.getElementById('scriptSourceView').style.display = 'none';
-            document.getElementById('scriptTargetView').style.display = 'none';
-            
-            document.getElementById('viewDiffBtn').classList.add('active');
-            document.getElementById('viewSourceBtn').classList.remove('active');
-            document.getElementById('viewTargetBtn').classList.remove('active');
-        });
-        
-        document.getElementById('viewSourceBtn').addEventListener('click', function() {
-            document.getElementById('scriptDiffView').style.display = 'none';
-            document.getElementById('scriptSourceView').style.display = 'block';
-            document.getElementById('scriptTargetView').style.display = 'none';
-            
-            document.getElementById('viewDiffBtn').classList.remove('active');
-            document.getElementById('viewSourceBtn').classList.add('active');
-            document.getElementById('viewTargetBtn').classList.remove('active');
-        });
-        
-        document.getElementById('viewTargetBtn').addEventListener('click', function() {
-            document.getElementById('scriptDiffView').style.display = 'none';
-            document.getElementById('scriptSourceView').style.display = 'none';
-            document.getElementById('scriptTargetView').style.display = 'block';
-            
-            document.getElementById('viewDiffBtn').classList.remove('active');
-            document.getElementById('viewSourceBtn').classList.remove('active');
-            document.getElementById('viewTargetBtn').classList.add('active');
-        });
-        
-        // Filter variables
         let showDifferencesOnly = false;
         
-        // Apply filter to table rows
         function applyTableFilter() {
-            const tableRows = document.querySelectorAll('#tablesComparisonTable tbody tr:not(.details-row)');
+            const rows = document.querySelectorAll('#tablesComparisonTable tbody tr:not(.details-row)');
             
-            tableRows.forEach(row => {
-                if (showDifferencesOnly && !row.classList.contains('table-row-diff')) {
-                    row.style.display = 'none';
-                    
-                    // Also hide the details row if it exists
-                    const tableName = row.querySelector('.toggle-details')?.getAttribute('data-table');
-                    if (tableName) {
-                        const detailsRow = document.getElementById('details-' + tableName.replace(/\s/g, '_').replace(/\./g, '_'));
-                        if (detailsRow) {
-                            detailsRow.style.display = 'none';
+            rows.forEach(row => {
+                if (showDifferencesOnly) {
+                    // If showing only differences, hide rows without differences
+                    if (row.classList.contains('table-row-same')) {
+                        row.style.display = 'none';
+                        
+                        // Also hide any associated details row
+                        const tableName = row.querySelector('.toggle-details')?.getAttribute('data-table');
+                        if (tableName) {
+                            const detailsId = `details-${tableName.replace(/\s/g, '_').replace(/\./g, '_')}`;
+                            const detailsRow = document.getElementById(detailsId);
+                            if (detailsRow) {
+                                detailsRow.style.display = 'none';
+                            }
                         }
+                    } else {
+                        row.style.display = '';
                     }
                 } else {
-                    row.style.display = 'table-row';
+                    // Show all rows
+                    row.style.display = '';
                 }
             });
+            
+            // Update button states
+            if (showDifferencesOnly) {
+                document.getElementById('showDifferencesOnly').classList.add('btn-secondary');
+                document.getElementById('showDifferencesOnly').classList.remove('btn-outline-secondary');
+                document.getElementById('showAllTables').classList.add('btn-outline-secondary');
+                document.getElementById('showAllTables').classList.remove('btn-secondary');
+            } else {
+                document.getElementById('showAllTables').classList.add('btn-secondary');
+                document.getElementById('showAllTables').classList.remove('btn-outline-secondary');
+                document.getElementById('showDifferencesOnly').classList.add('btn-outline-secondary');
+                document.getElementById('showDifferencesOnly').classList.remove('btn-secondary');
+            }
         }
         
         // Show all tables
@@ -354,240 +335,247 @@
             applyTableFilter();
         });
         
-        // Show only differences
+        // Show only tables with differences
         document.getElementById('showDifferencesOnly').addEventListener('click', function() {
             showDifferencesOnly = true;
             applyTableFilter();
         });
         
-        // Function to create table row HTML
+        // Toggle differences only checkbox
+        document.getElementById('toggleDifferencesOnly').addEventListener('change', function() {
+            showDifferencesOnly = this.checked;
+            applyTableFilter();
+        });
+        
         function createTableRow(table) {
-            const rowClass = table.differences ? 'table-row-diff' : 'table-row-same';
-            const tableNameSafe = table.table_name.replace(/\s/g, '_').replace(/\./g, '_');
+            const rowClass = table.differences ? 'diff-modified table-row-diff' : 'table-row-same';
             
-            let html = `
-                <tr class="${rowClass}">
-                    <td>${table.table_name}</td>
-                    <td>
-                        ${table.in_db1 
-                            ? '<span class="badge bg-success">Present</span>' 
-                            : '<span class="badge bg-danger">Missing</span>'}
-                    </td>
-                    <td>
-                        ${table.in_db2 
-                            ? '<span class="badge bg-success">Present</span>' 
-                            : '<span class="badge bg-danger">Missing</span>'}
-                    </td>
-                    <td>
-                        ${!table.differences 
-                            ? '<span class="badge bg-success">Identical</span>' 
-                            : '<span class="badge bg-warning">Differences Found</span>'}
-                    </td>
-                    <td>
-                        ${table.in_db1 && table.in_db2 
-                            ? `<button class="btn btn-sm btn-primary toggle-details" data-table="${table.table_name}">
-                                Show Details
-                               </button>
-                               <button class="btn btn-sm btn-secondary view-create-script" data-table="${table.table_name}">
-                                View CREATE Script
-                               </button>` 
-                            : '<span class="text-muted">Not comparable</span>'}
-                    </td>
-                </tr>
-            `;
+            let html = `<tr class="${rowClass}">`;
+            html += `<td>${table.table_name}</td>`;
             
+            // Source database column
+            html += '<td>';
+            if (table.in_db1) {
+                html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Present</span>';
+            } else {
+                html += '<span class="status-badge status-deleted"><i class="bi bi-x-circle-fill"></i> Missing</span>';
+            }
+            html += '</td>';
+            
+            // Target database column
+            html += '<td>';
+            if (table.in_db2) {
+                html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Present</span>';
+            } else {
+                html += '<span class="status-badge status-deleted"><i class="bi bi-x-circle-fill"></i> Missing</span>';
+            }
+            html += '</td>';
+            
+            // Status column
+            html += '<td>';
+            if (!table.differences) {
+                html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Identical</span>';
+            } else {
+                html += '<span class="status-badge status-modified"><i class="bi bi-exclamation-circle-fill"></i> Differences</span>';
+            }
+            html += '</td>';
+            
+            // Actions column
+            html += '<td>';
             if (table.in_db1 && table.in_db2) {
-                html += `
-                    <tr class="details-row" id="details-${tableNameSafe}" style="display: none;">
-                        <td colspan="5">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead class="table-secondary">
-                                        <tr>
-                                            <th>Column Name</th>
-                                            <th>Source Database</th>
-                                            <th>Target Database</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                `;
+                html += `<button class="btn btn-sm btn-outline-primary toggle-details" data-table="${table.table_name}">`;
+                html += '<i class="bi bi-list-ul"></i> Details</button> ';
+                html += `<button class="btn btn-sm btn-outline-secondary view-create-script" data-table="${table.table_name}">`;
+                html += '<i class="bi bi-code-slash"></i> SQL</button>';
+            } else {
+                html += '<span class="text-muted">Not comparable</span>';
+            }
+            html += '</td></tr>';
+            
+            // Add details row if applicable
+            if (table.in_db1 && table.in_db2) {
+                const detailsId = `details-${table.table_name.replace(/\s/g, '_').replace(/\./g, '_')}`;
+                
+                html += `<tr class="details-row" id="${detailsId}" style="display: none;"><td colspan="5">`;
+                html += '<div class="table-responsive"><table class="coral-table coral-table-striped">';
+                html += '<thead><tr><th>Column Name</th><th>Source Database</th><th>Target Database</th><th>Status</th></tr></thead>';
+                html += '<tbody>';
                 
                 table.columns.forEach(column => {
-                    const columnClass = column.differences ? 'table-warning' : '';
+                    const columnClass = column.differences ? 'diff-modified' : '';
                     
-                    html += `
-                        <tr class="${columnClass}">
-                            <td>${column.column_name}</td>
-                            <td>
-                                ${column.in_db1 
-                                    ? `${column.source.formatted_data_type}
-                                       ${column.source.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : ''}
-                                       ${column.source.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : ''}
-                                       ${column.source.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : ''}`
-                                    : '<span class="badge bg-danger">Missing</span>'}
-                            </td>
-                            <td>
-                                ${column.in_db2 
-                                    ? `${column.target.formatted_data_type}
-                                       ${column.target.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : ''}
-                                       ${column.target.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : ''}
-                                       ${column.target.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : ''}`
-                                    : '<span class="badge bg-danger">Missing</span>'}
-                            </td>
-                            <td>
-                                ${!column.differences 
-                                    ? '<span class="badge bg-success">Identical</span>' 
-                                    : '<span class="badge bg-warning">Different</span>'}
-                            </td>
-                        </tr>
-                    `;
+                    html += `<tr class="${columnClass}">`;
+                    html += `<td>${column.column_name}</td>`;
+                    
+                    // Source column details
+                    html += '<td>';
+                    if (column.in_db1) {
+                        html += column.source.formatted_data_type;
+                        if (column.source.is_nullable === 'No') {
+                            html += ' <span class="status-badge status-unchanged">NOT NULL</span>';
+                        }
+                        if (column.source.is_primary_key === 'Yes') {
+                            html += ' <span class="status-badge" style="background-color: #2196F3;">PK</span>';
+                        }
+                        if (column.source.is_identity === 'Yes') {
+                            html += ' <span class="status-badge" style="background-color: #333333;">Identity</span>';
+                        }
+                    } else {
+                        html += '<span class="status-badge status-deleted">Missing</span>';
+                    }
+                    html += '</td>';
+                    
+                    // Target column details
+                    html += '<td>';
+                    if (column.in_db2) {
+                        html += column.target.formatted_data_type;
+                        if (column.target.is_nullable === 'No') {
+                            html += ' <span class="status-badge status-unchanged">NOT NULL</span>';
+                        }
+                        if (column.target.is_primary_key === 'Yes') {
+                            html += ' <span class="status-badge" style="background-color: #2196F3;">PK</span>';
+                        }
+                        if (column.target.is_identity === 'Yes') {
+                            html += ' <span class="status-badge" style="background-color: #333333;">Identity</span>';
+                        }
+                    } else {
+                        html += '<span class="status-badge status-deleted">Missing</span>';
+                    }
+                    html += '</td>';
+                    
+                    // Status column
+                    html += '<td>';
+                    if (!column.differences) {
+                        html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Identical</span>';
+                    } else {
+                        html += '<span class="status-badge status-modified"><i class="bi bi-exclamation-circle-fill"></i> Different</span>';
+                    }
+                    html += '</td></tr>';
                 });
                 
-                html += `
-                                    </tbody>
-                                </table>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                html += '</tbody></table></div></td></tr>';
             }
             
             return html;
         }
         
-        // Function to update progress UI
         function updateProgress(progress, processedTables, totalTables, currentTable) {
             const progressBar = document.getElementById('progressBar');
             const progressStatus = document.getElementById('progressStatus');
             const tableCounter = document.getElementById('tableCounter');
             const currentTableName = document.getElementById('currentTableName');
             
-            // Update progress bar
-            progressBar.style.width = `${progress}%`;
-            progressBar.setAttribute('aria-valuenow', progress);
-            progressBar.textContent = `${progress}%`;
-            
-            // Update status text
-            if (progress < 100) {
-                progressStatus.textContent = 'Comparing table schemas...';
-            } else {
-                progressStatus.textContent = 'Comparison complete!';
-            }
-            
-            // Update table counter
-            tableCounter.textContent = `${processedTables} of ${totalTables} tables processed`;
-            
-            // Update current table name
-            if (currentTable && progress < 100) {
-                currentTableName.textContent = `Currently processing: ${currentTable}`;
-            } else {
-                currentTableName.textContent = '';
+            if (progressBar && progressStatus && tableCounter) {
+                // Update progress bar
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressBar.textContent = `${progress}%`;
+                
+                // Update status text
+                if (progress < 100) {
+                    progressStatus.textContent = 'Comparing tables...';
+                } else {
+                    progressStatus.textContent = 'Comparison complete!';
+                    
+                    // Show results card after a short delay
+                    setTimeout(() => {
+                        document.getElementById('progressCard').style.display = 'none';
+                        document.getElementById('resultsCard').style.display = 'block';
+                    }, 1000);
+                }
+                
+                // Update table counter
+                tableCounter.textContent = `${processedTables} of ${totalTables} tables processed`;
+                
+                // Update current table name
+                if (currentTableName && currentTable) {
+                    currentTableName.textContent = `Currently processing: ${currentTable}`;
+                }
             }
         }
         
-        // Function to fetch comparison results
         function fetchComparisonResults(offset = 0, accumulatedResults = []) {
-            fetch(`/comparison/api/schema_comparison_progress?offset=${offset}&limit=10`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Combine results
-                        const combinedResults = [...accumulatedResults, ...data.current_batch];
-                        
-                        // Update progress
-                        updateProgress(
-                            data.progress, 
-                            data.processed_tables, 
-                            data.total_tables, 
-                            data.current_batch.length > 0 ? data.current_batch[0].table_name : null
-                        );
-                        
-                        if (data.is_complete) {
-                            // All tables processed, update UI
-                            document.getElementById('progressCard').style.display = 'none';
-                            document.getElementById('resultsCard').style.display = 'block';
+            if (document.getElementById('progressCard')) {
+                fetch(`/comparison/schema/status?offset=${offset}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'in_progress') {
+                            // Update progress
+                            updateProgress(
+                                data.progress,
+                                data.processed_tables,
+                                data.total_tables,
+                                data.current_table
+                            );
                             
-                            // Populate the table
-                            const tableBody = document.getElementById('comparisonTableBody');
-                            tableBody.innerHTML = '';
+                            // Check again after a delay
+                            setTimeout(() => fetchComparisonResults(offset, accumulatedResults), 1000);
+                        } else if (data.status === 'complete') {
+                            // Combine results
+                            const results = [...accumulatedResults, ...data.results];
                             
-                            combinedResults.forEach(table => {
-                                tableBody.innerHTML += createTableRow(table);
-                            });
-                            
-                            // Set up event listeners for the toggle buttons
-                            setupToggleDetails();
-                            
-                            // Set up event listeners for CREATE TABLE script buttons
-                            document.querySelectorAll('.view-create-script').forEach(button => {
-                                button.addEventListener('click', function() {
-                                    const tableName = this.getAttribute('data-table');
+                            // Check if we need to fetch more results
+                            if (data.has_more) {
+                                fetchComparisonResults(offset + data.results.length, results);
+                            } else {
+                                // Update progress to 100%
+                                updateProgress(100, data.total_tables, data.total_tables, '');
+                                
+                                // Render the results
+                                const tableBody = document.getElementById('comparisonTableBody');
+                                if (tableBody) {
+                                    let html = '';
+                                    results.forEach(table => {
+                                        html += createTableRow(table);
+                                    });
+                                    tableBody.innerHTML = html;
                                     
-                                    // Show the modal
-                                    const modal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
-                                    modal.show();
+                                    // Set up event handlers for the newly created elements
+                                    setupToggleDetails();
                                     
-                                    // Update modal title
-                                    document.getElementById('scriptComparisonModalLabel').textContent = 
-                                        `CREATE TABLE Script Comparison: ${tableName}`;
-                                    
-                                    // Show loading indicator
-                                    document.getElementById('loadingScripts').style.display = 'block';
-                                    document.getElementById('diffContent').style.display = 'none';
-                                    
-                                    // Reset views
-                                    document.getElementById('scriptDiffView').style.display = 'block';
-                                    document.getElementById('scriptSourceView').style.display = 'none';
-                                    document.getElementById('scriptTargetView').style.display = 'none';
-                                    
-                                    // Set active button
-                                    document.getElementById('viewDiffBtn').classList.add('active');
-                                    document.getElementById('viewSourceBtn').classList.remove('active');
-                                    document.getElementById('viewTargetBtn').classList.remove('active');
-                                    
-                                    // Fetch the CREATE TABLE scripts
-                                    fetch(`/comparison/api/create_table_script/${tableName}`)
-                                        .then(response => response.json())
-                                        .then(data => {
-                                            if (data.status === 'success') {
-                                                const comparison = data.comparison;
-                                                
-                                                // Update the diff view
-                                                document.getElementById('diffContent').innerHTML = comparison.diff_html;
-                                                document.getElementById('loadingScripts').style.display = 'none';
-                                                document.getElementById('diffContent').style.display = 'block';
-                                                
-                                                // Update source and target views
-                                                document.getElementById('sourceScript').textContent = comparison.source_script;
-                                                document.getElementById('targetScript').textContent = comparison.target_script;
-                                            } else {
-                                                document.getElementById('loadingScripts').innerHTML = 
-                                                    `<div class="alert alert-danger">Error: ${data.message}</div>`;
-                                            }
-                                        })
-                                        .catch(error => {
-                                            document.getElementById('loadingScripts').innerHTML = 
-                                                `<div class="alert alert-danger">Error fetching scripts: ${error.message}</div>`;
+                                    // Set up CREATE TABLE script comparison
+                                    document.querySelectorAll('.view-create-script').forEach(button => {
+                                        button.addEventListener('click', function() {
+                                            const tableName = this.getAttribute('data-table');
+                                            
+                                            // Show loading state
+                                            document.getElementById('sourceScript').textContent = 'Loading...';
+                                            document.getElementById('targetScript').textContent = 'Loading...';
+                                            
+                                            // Show the modal
+                                            const scriptModal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
+                                            scriptModal.show();
+                                            
+                                            // Fetch the scripts
+                                            fetch(`/comparison/schema/scripts/${tableName}`)
+                                                .then(response => response.json())
+                                                .then(data => {
+                                                    document.getElementById('sourceScript').textContent = data.source_script || 'No script available';
+                                                    document.getElementById('targetScript').textContent = data.target_script || 'No script available';
+                                                    
+                                                    // Update modal title
+                                                    document.getElementById('scriptComparisonModalLabel').textContent = `CREATE TABLE Script: ${tableName}`;
+                                                })
+                                                .catch(error => {
+                                                    console.error('Error fetching scripts:', error);
+                                                    document.getElementById('sourceScript').textContent = 'Error loading script';
+                                                    document.getElementById('targetScript').textContent = 'Error loading script';
+                                                });
                                         });
-                                });
-                            });
-                        } else {
-                            // More tables to process, fetch next batch
-                            setTimeout(() => {
-                                fetchComparisonResults(data.next_offset, combinedResults);
-                            }, 100);
+                                    });
+                                    
+                                    // Apply initial filter
+                                    applyTableFilter();
+                                }
+                            }
                         }
-                    } else {
-                        // Error occurred
-                        document.getElementById('progressStatus').textContent = `Error: ${data.message}`;
-                        document.getElementById('progressBar').classList.add('bg-danger');
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('progressStatus').textContent = `Error: ${error.message}`;
-                    document.getElementById('progressBar').classList.add('bg-danger');
-                });
+                    })
+                    .catch(error => {
+                        console.error('Error fetching comparison status:', error);
+                        // Retry after a delay
+                        setTimeout(() => fetchComparisonResults(offset, accumulatedResults), 2000);
+                    });
+            }
         }
         
         // Start fetching comparison results
@@ -595,41 +583,9 @@
         
         // Set up toggle details for static content
         setupToggleDetails();
+        
+        // Apply initial filter
+        applyTableFilter();
     });
 </script>
 {% endblock %}
-
-<style>
-    /* Styles for the diff view */
-    .diff-line {
-        font-family: monospace;
-        white-space: pre;
-        padding: 2px 5px;
-        line-height: 1.5;
-    }
-    
-    .diff-added {
-        background-color: #e6ffed;
-        color: #22863a;
-    }
-    
-    .diff-removed {
-        background-color: #ffeef0;
-        color: #cb2431;
-    }
-    
-    .diff-header {
-        background-color: #f1f8ff;
-        color: #0366d6;
-    }
-    
-    .diff-file-header {
-        background-color: #f6f8fa;
-        color: #586069;
-        font-weight: bold;
-    }
-    
-    .diff-context {
-        color: #24292e;
-    }
-</style>

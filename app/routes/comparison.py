@@ -82,7 +82,8 @@ def compare_data_directly(data1, data2, selected_columns):
             'row_count_difference': abs(data1['total_rows'] - data2['total_rows'])
         },
         'columns': selected_columns,
-        'rows': [],  # We'll use the formatted HTML for display instead
+        'source_data': data1,
+        'target_data': data2,
         'data_differences': differences
     }
 

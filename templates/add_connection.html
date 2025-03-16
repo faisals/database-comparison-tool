@@ -1,97 +1,118 @@
 {% extends "base.html" %}
 
-{% block title %}Add Database Connection{% endblock %}
+{% block title %}CORAL - Add Database Connection{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
+            <div class="coral-card shadow">
+                <div class="coral-card-header">
                     <h2 class="mb-0"><i class="bi bi-database-add"></i> Add Database Connection</h2>
                 </div>
-                <div class="card-body">
-                    <p class="lead">Enter the details for your new database connection.</p>
+                <div class="coral-card-body">
+                    <p class="lead mb-4">Enter the details for your new database connection.</p>
                     
                     <form method="POST" action="{{ url_for('connections.add_connection') }}">
                         {{ form.hidden_tag() }}
                         
-                        <div class="mb-3">
-                            <label for="connection_name" class="form-label"><i class="bi bi-tag"></i> {{ form.connection_name.label }}</label>
-                            {{ form.connection_name(class="form-control", placeholder="Enter a unique name for this connection") }}
-                            <div class="form-text">A descriptive name to identify this connection</div>
-                            {% if form.connection_name.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {% for error in form.connection_name.errors %}
-                                        {{ error }}
-                                    {% endfor %}
+                        <div class="coral-card mb-4">
+                            <div class="coral-card-header">
+                                <h5 class="mb-0">Connection Details</h5>
+                            </div>
+                            <div class="coral-card-body">
+                                <div class="mb-3">
+                                    <label for="connection_name" class="form-label"><i class="bi bi-tag"></i> {{ form.connection_name.label }}</label>
+                                    {{ form.connection_name(class="form-control", placeholder="Enter a unique name for this connection") }}
+                                    <div class="form-text">A descriptive name to identify this connection</div>
+                                    {% if form.connection_name.errors %}
+                                        <div class="alert alert-danger mt-2">
+                                            {% for error in form.connection_name.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
+                                
+                                <div class="mb-3">
+                                    <label for="server" class="form-label"><i class="bi bi-hdd-network"></i> {{ form.server.label }}</label>
+                                    {{ form.server(class="form-control", placeholder="e.g., localhost, 127.0.0.1, server.example.com") }}
+                                    <div class="form-text">Server hostname or IP address</div>
+                                    {% if form.server.errors %}
+                                        <div class="alert alert-danger mt-2">
+                                            {% for error in form.server.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="database" class="form-label"><i class="bi bi-database"></i> {{ form.database.label }}</label>
+                                    {{ form.database(class="form-control", placeholder="e.g., mydatabase") }}
+                                    <div class="form-text">Name of the database to connect to</div>
+                                    {% if form.database.errors %}
+                                        <div class="alert alert-danger mt-2">
+                                            {% for error in form.database.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="server" class="form-label"><i class="bi bi-hdd-network"></i> {{ form.server.label }}</label>
-                            {{ form.server(class="form-control", placeholder="e.g., localhost, 127.0.0.1, server.example.com") }}
-                            <div class="form-text">Server hostname or IP address</div>
-                            {% if form.server.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {% for error in form.server.errors %}
-                                        {{ error }}
-                                    {% endfor %}
+                        <div class="coral-card mb-4">
+                            <div class="coral-card-header">
+                                <h5 class="mb-0">Authentication</h5>
+                            </div>
+                            <div class="coral-card-body">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label"><i class="bi bi-person"></i> {{ form.username.label }}</label>
+                                    {{ form.username(class="form-control", placeholder="Database username") }}
+                                    <div class="form-text">Username for database authentication</div>
+                                    {% if form.username.errors %}
+                                        <div class="alert alert-danger mt-2">
+                                            {% for error in form.username.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
+                                
+                                <div class="mb-3">
+                                    <label for="password" class="form-label"><i class="bi bi-key"></i> {{ form.password.label }}</label>
+                                    {{ form.password(class="form-control", placeholder="Database password") }}
+                                    <div class="form-text">Password for database authentication</div>
+                                    {% if form.password.errors %}
+                                        <div class="alert alert-danger mt-2">
+                                            {% for error in form.password.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="database" class="form-label"><i class="bi bi-database"></i> {{ form.database.label }}</label>
-                            {{ form.database(class="form-control", placeholder="e.g., mydatabase") }}
-                            <div class="form-text">Name of the database to connect to</div>
-                            {% if form.database.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {% for error in form.database.errors %}
-                                        {{ error }}
-                                    {% endfor %}
+                        <div class="coral-card mb-4">
+                            <div class="coral-card-header">
+                                <h5 class="mb-0">Advanced Settings</h5>
+                            </div>
+                            <div class="coral-card-body">
+                                <div class="mb-3">
+                                    <label for="driver" class="form-label"><i class="bi bi-cpu"></i> {{ form.driver.label }}</label>
+                                    {{ form.driver(class="form-control", placeholder="e.g., ODBC Driver 17 for SQL Server") }}
+                                    <div class="form-text">ODBC driver name (default: ODBC Driver 17 for SQL Server)</div>
+                                    {% if form.driver.errors %}
+                                        <div class="alert alert-danger mt-2">
+                                            {% for error in form.driver.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="username" class="form-label"><i class="bi bi-person"></i> {{ form.username.label }}</label>
-                            {{ form.username(class="form-control", placeholder="Database username") }}
-                            <div class="form-text">Username for database authentication</div>
-                            {% if form.username.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {% for error in form.username.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="password" class="form-label"><i class="bi bi-key"></i> {{ form.password.label }}</label>
-                            {{ form.password(class="form-control", placeholder="Database password") }}
-                            <div class="form-text">Password for database authentication</div>
-                            {% if form.password.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {% for error in form.password.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="driver" class="form-label"><i class="bi bi-cpu"></i> {{ form.driver.label }}</label>
-                            {{ form.driver(class="form-control", placeholder="e.g., ODBC Driver 17 for SQL Server") }}
-                            <div class="form-text">ODBC driver name (default: ODBC Driver 17 for SQL Server)</div>
-                            {% if form.driver.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {% for error in form.driver.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            </div>
                         </div>
                         
                         <div class="d-grid gap-2">
@@ -104,15 +125,19 @@
                         </div>
                     </form>
                 </div>
-                <div class="card-footer bg-light">
-                    <div class="alert alert-info mb-0">
-                        <h5><i class="bi bi-info-circle"></i> Connection Tips</h5>
-                        <ul class="mb-0">
-                            <li>For local SQL Server instances, use <code>localhost</code> or <code>127.0.0.1</code> as the server</li>
-                            <li>For named instances, use the format <code>server\instance</code></li>
-                            <li>Common drivers include <code>ODBC Driver 17 for SQL Server</code>, <code>ODBC Driver 13 for SQL Server</code>, or <code>SQL Server Native Client 11.0</code></li>
-                            <li>Connection information is stored in your browser session</li>
-                        </ul>
+                <div class="coral-card-footer">
+                    <div class="coral-card mb-0">
+                        <div class="coral-card-header">
+                            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Connection Tips</h5>
+                        </div>
+                        <div class="coral-card-body">
+                            <ul class="mb-0">
+                                <li>For local SQL Server instances, use <code>localhost</code> or <code>127.0.0.1</code> as the server</li>
+                                <li>For named instances, use the format <code>server\instance</code></li>
+                                <li>Common drivers include <code>ODBC Driver 17 for SQL Server</code>, <code>ODBC Driver 13 for SQL Server</code>, or <code>SQL Server Native Client 11.0</code></li>
+                                <li>Connection information is stored in your browser session</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
