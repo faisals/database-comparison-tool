@@ -95,6 +95,9 @@
                                     <button class="btn btn-sm btn-primary toggle-details" data-table="{{ table.table_name }}">
                                         Show Details
                                     </button>
+                                    <button class="btn btn-sm btn-secondary view-create-script" data-table="{{ table.table_name }}">
+                                        View CREATE Script
+                                    </button>
                                 {% else %}
                                     <span class="text-muted">Not comparable</span>
                                 {% endif %}
@@ -160,6 +163,49 @@
         </div>
     </div>
     
+    <!-- CREATE TABLE Script Comparison Modal -->
+    <div class="modal fade" id="scriptComparisonModal" tabindex="-1" aria-labelledby="scriptComparisonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="scriptComparisonModalLabel">CREATE TABLE Script Comparison</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-end mb-3">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary active" id="viewDiffBtn">View Diff</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="viewSourceBtn">View Source</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="viewTargetBtn">View Target</button>
+                        </div>
+                    </div>
+                    
+                    <div id="scriptDiffView">
+                        <div class="alert alert-info" id="loadingScripts">
+                            Loading scripts, please wait...
+                        </div>
+                        <div id="diffContent" style="display: none;">
+                            <!-- Diff content will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <div id="scriptSourceView" style="display: none;">
+                        <h6 class="mb-2">Source Database Script:</h6>
+                        <pre class="bg-light p-3 border rounded"><code id="sourceScript"></code></pre>
+                    </div>
+                    
+                    <div id="scriptTargetView" style="display: none;">
+                        <h6 class="mb-2">Target Database Script:</h6>
+                        <pre class="bg-light p-3 border rounded"><code id="targetScript"></code></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="d-flex justify-content-between mb-4">
         <a href="{{ url_for('comparison.select_comparison_type') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Back to Comparison Type
@@ -169,6 +215,7 @@
         </a>
     </div>
 </div>
+{% endblock %}
 
 {% block scripts %}
 <script>
@@ -191,27 +238,121 @@
             });
         }
         
-        // Track filter state
+        // Set up CREATE TABLE script comparison
+        document.querySelectorAll('.view-create-script').forEach(button => {
+            button.addEventListener('click', function() {
+                const tableName = this.getAttribute('data-table');
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
+                modal.show();
+                
+                // Update modal title
+                document.getElementById('scriptComparisonModalLabel').textContent = 
+                    `CREATE TABLE Script Comparison: ${tableName}`;
+                
+                // Show loading indicator
+                document.getElementById('loadingScripts').style.display = 'block';
+                document.getElementById('diffContent').style.display = 'none';
+                
+                // Reset views
+                document.getElementById('scriptDiffView').style.display = 'block';
+                document.getElementById('scriptSourceView').style.display = 'none';
+                document.getElementById('scriptTargetView').style.display = 'none';
+                
+                // Set active button
+                document.getElementById('viewDiffBtn').classList.add('active');
+                document.getElementById('viewSourceBtn').classList.remove('active');
+                document.getElementById('viewTargetBtn').classList.remove('active');
+                
+                // Fetch the CREATE TABLE scripts
+                fetch(`/comparison/api/create_table_script/${tableName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            const comparison = data.comparison;
+                            
+                            // Update the diff view
+                            document.getElementById('diffContent').innerHTML = comparison.diff_html;
+                            document.getElementById('loadingScripts').style.display = 'none';
+                            document.getElementById('diffContent').style.display = 'block';
+                            
+                            // Update source and target views
+                            document.getElementById('sourceScript').textContent = comparison.source_script;
+                            document.getElementById('targetScript').textContent = comparison.target_script;
+                        } else {
+                            document.getElementById('loadingScripts').innerHTML = 
+                                `<div class="alert alert-danger">Error: ${data.message}</div>`;
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById('loadingScripts').innerHTML = 
+                            `<div class="alert alert-danger">Error fetching scripts: ${error.message}</div>`;
+                    });
+            });
+        });
+        
+        // Set up view toggle buttons in the modal
+        document.getElementById('viewDiffBtn').addEventListener('click', function() {
+            document.getElementById('scriptDiffView').style.display = 'block';
+            document.getElementById('scriptSourceView').style.display = 'none';
+            document.getElementById('scriptTargetView').style.display = 'none';
+            
+            document.getElementById('viewDiffBtn').classList.add('active');
+            document.getElementById('viewSourceBtn').classList.remove('active');
+            document.getElementById('viewTargetBtn').classList.remove('active');
+        });
+        
+        document.getElementById('viewSourceBtn').addEventListener('click', function() {
+            document.getElementById('scriptDiffView').style.display = 'none';
+            document.getElementById('scriptSourceView').style.display = 'block';
+            document.getElementById('scriptTargetView').style.display = 'none';
+            
+            document.getElementById('viewDiffBtn').classList.remove('active');
+            document.getElementById('viewSourceBtn').classList.add('active');
+            document.getElementById('viewTargetBtn').classList.remove('active');
+        });
+        
+        document.getElementById('viewTargetBtn').addEventListener('click', function() {
+            document.getElementById('scriptDiffView').style.display = 'none';
+            document.getElementById('scriptSourceView').style.display = 'none';
+            document.getElementById('scriptTargetView').style.display = 'block';
+            
+            document.getElementById('viewDiffBtn').classList.remove('active');
+            document.getElementById('viewSourceBtn').classList.remove('active');
+            document.getElementById('viewTargetBtn').classList.add('active');
+        });
+        
+        // Filter variables
         let showDifferencesOnly = false;
         
-        // Function to apply current filter state to all table rows
+        // Apply filter to table rows
         function applyTableFilter() {
-            const tableRows = document.querySelectorAll('#comparisonTableBody > tr:not(.details-row)');
+            const tableRows = document.querySelectorAll('#tablesComparisonTable tbody tr:not(.details-row)');
             
             tableRows.forEach(row => {
-                if (showDifferencesOnly) {
-                    // If showing differences only, hide rows without differences
-                    if (row.classList.contains('table-row-same')) {
-                        row.style.display = 'none';
-                    } else {
-                        row.style.display = 'table-row';
+                if (showDifferencesOnly && !row.classList.contains('table-row-diff')) {
+                    row.style.display = 'none';
+                    
+                    // Also hide the details row if it exists
+                    const tableName = row.querySelector('.toggle-details')?.getAttribute('data-table');
+                    if (tableName) {
+                        const detailsRow = document.getElementById('details-' + tableName.replace(/\s/g, '_').replace(/\./g, '_'));
+                        if (detailsRow) {
+                            detailsRow.style.display = 'none';
+                        }
                     }
                 } else {
-                    // Show all rows
                     row.style.display = 'table-row';
                 }
             });
         }
+        
+        // Show all tables
+        document.getElementById('showAllTables').addEventListener('click', function() {
+            showDifferencesOnly = false;
+            applyTableFilter();
+        });
         
         // Show only differences
         document.getElementById('showDifferencesOnly').addEventListener('click', function() {
@@ -219,23 +360,10 @@
             applyTableFilter();
         });
         
-        // Show all tables
-        document.getElementById('showAllTables').addEventListener('click', function() {
-            showDifferencesOnly = false;
-            applyTableFilter();
-        });
-
-        {% if comparison_in_progress %}
-        // Dynamic loading of comparison results
-        let offset = 0;
-        const limit = 5; // Number of tables to process in each batch
-        let allTables = [];
-        let totalTables = 0;
-        let isComplete = false;
-
         // Function to create table row HTML
         function createTableRow(table) {
             const rowClass = table.differences ? 'table-row-diff' : 'table-row-same';
+            const tableNameSafe = table.table_name.replace(/\s/g, '_').replace(/\./g, '_');
             
             let html = `
                 <tr class="${rowClass}">
@@ -257,15 +385,20 @@
                     </td>
                     <td>
                         ${table.in_db1 && table.in_db2 
-                            ? '<button class="btn btn-sm btn-primary toggle-details" data-table="' + table.table_name + '">Show Details</button>' 
+                            ? `<button class="btn btn-sm btn-primary toggle-details" data-table="${table.table_name}">
+                                Show Details
+                               </button>
+                               <button class="btn btn-sm btn-secondary view-create-script" data-table="${table.table_name}">
+                                View CREATE Script
+                               </button>` 
                             : '<span class="text-muted">Not comparable</span>'}
                     </td>
-                </tr>`;
-                
+                </tr>
+            `;
+            
             if (table.in_db1 && table.in_db2) {
-                const safeTableName = table.table_name.replace(/\s/g, '_').replace(/\./g, '_');
                 html += `
-                    <tr class="details-row" id="details-${safeTableName}" style="display: none;">
+                    <tr class="details-row" id="details-${tableNameSafe}" style="display: none;">
                         <td colspan="5">
                             <div class="table-responsive">
                                 <table class="table table-sm">
@@ -277,27 +410,29 @@
                                             <th>Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody>`;
+                                    <tbody>
+                `;
                 
                 table.columns.forEach(column => {
                     const columnClass = column.differences ? 'table-warning' : '';
+                    
                     html += `
                         <tr class="${columnClass}">
                             <td>${column.column_name}</td>
                             <td>
                                 ${column.in_db1 
-                                    ? column.source.formatted_data_type + 
-                                      (column.source.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
-                                      (column.source.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
-                                      (column.source.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
+                                    ? `${column.source.formatted_data_type}
+                                       ${column.source.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : ''}
+                                       ${column.source.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : ''}
+                                       ${column.source.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : ''}`
                                     : '<span class="badge bg-danger">Missing</span>'}
                             </td>
                             <td>
                                 ${column.in_db2 
-                                    ? column.target.formatted_data_type + 
-                                      (column.target.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : '') +
-                                      (column.target.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : '') +
-                                      (column.target.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : '')
+                                    ? `${column.target.formatted_data_type}
+                                       ${column.target.is_nullable === 'No' ? '<span class="badge bg-secondary">NOT NULL</span>' : ''}
+                                       ${column.target.is_primary_key === 'Yes' ? '<span class="badge bg-info">PK</span>' : ''}
+                                       ${column.target.is_identity === 'Yes' ? '<span class="badge bg-dark">Identity</span>' : ''}`
                                     : '<span class="badge bg-danger">Missing</span>'}
                             </td>
                             <td>
@@ -305,7 +440,8 @@
                                     ? '<span class="badge bg-success">Identical</span>' 
                                     : '<span class="badge bg-warning">Different</span>'}
                             </td>
-                        </tr>`;
+                        </tr>
+                    `;
                 });
                 
                 html += `
@@ -313,12 +449,13 @@
                                 </table>
                             </div>
                         </td>
-                    </tr>`;
+                    </tr>
+                `;
             }
             
             return html;
         }
-
+        
         // Function to update progress UI
         function updateProgress(progress, processedTables, totalTables, currentTable) {
             const progressBar = document.getElementById('progressBar');
@@ -326,110 +463,173 @@
             const tableCounter = document.getElementById('tableCounter');
             const currentTableName = document.getElementById('currentTableName');
             
-            progressBar.style.width = progress + '%';
+            // Update progress bar
+            progressBar.style.width = `${progress}%`;
             progressBar.setAttribute('aria-valuenow', progress);
-            progressBar.textContent = progress + '%';
+            progressBar.textContent = `${progress}%`;
             
-            tableCounter.textContent = processedTables + ' of ' + totalTables + ' tables processed';
-            
-            if (currentTable) {
-                progressStatus.textContent = 'Processing table: ' + currentTable;
-                currentTableName.textContent = currentTable;
+            // Update status text
+            if (progress < 100) {
+                progressStatus.textContent = 'Comparing table schemas...';
             } else {
-                progressStatus.textContent = 'Initializing comparison...';
-                currentTableName.textContent = '';
+                progressStatus.textContent = 'Comparison complete!';
             }
             
-            if (progress >= 100) {
-                progressStatus.textContent = 'Comparison complete!';
+            // Update table counter
+            tableCounter.textContent = `${processedTables} of ${totalTables} tables processed`;
+            
+            // Update current table name
+            if (currentTable && progress < 100) {
+                currentTableName.textContent = `Currently processing: ${currentTable}`;
+            } else {
                 currentTableName.textContent = '';
-                
-                // Hide progress card after a delay
-                setTimeout(() => {
-                    document.getElementById('progressCard').style.display = 'none';
-                }, 2000);
             }
         }
-
+        
         // Function to fetch comparison results
-        function fetchComparisonResults() {
-            if (isComplete) return;
-            
-            const url = `/comparison/api/schema_comparison_progress?offset=${offset}&limit=${limit}`;
-            
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+        function fetchComparisonResults(offset = 0, accumulatedResults = []) {
+            fetch(`/comparison/api/schema_comparison_progress?offset=${offset}&limit=10`)
+                .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        totalTables = data.total_tables;
+                        // Combine results
+                        const combinedResults = [...accumulatedResults, ...data.current_batch];
                         
                         // Update progress
                         updateProgress(
                             data.progress, 
                             data.processed_tables, 
-                            data.total_tables,
-                            data.current_batch.length > 0 ? data.current_batch[data.current_batch.length - 1].table_name : null
+                            data.total_tables, 
+                            data.current_batch.length > 0 ? data.current_batch[0].table_name : null
                         );
                         
-                        // Add tables to the results table
-                        const tableBody = document.getElementById('comparisonTableBody');
-                        
-                        data.current_batch.forEach(table => {
-                            // Check if this table is already in allTables array
-                            const existingTableIndex = allTables.findIndex(t => t.table_name === table.table_name);
-                            if (existingTableIndex === -1) {
-                                // Table doesn't exist yet, add it
-                                allTables.push(table);
-                                
-                                // Add the row HTML
-                                tableBody.innerHTML += createTableRow(table);
-                            }
-                        });
-                        
-                        // Setup toggle details for new rows
-                        setupToggleDetails();
-                        
-                        // Apply current filter state to all rows
-                        applyTableFilter();
-                        
-                        // Show results card if we have data
-                        if (allTables.length > 0) {
+                        if (data.is_complete) {
+                            // All tables processed, update UI
+                            document.getElementById('progressCard').style.display = 'none';
                             document.getElementById('resultsCard').style.display = 'block';
-                        }
-                        
-                        // Update offset for next batch
-                        offset += data.current_batch.length;
-                        
-                        // Check if we're done
-                        isComplete = data.is_complete;
-                        
-                        if (!isComplete) {
-                            // Continue fetching more results
-                            setTimeout(fetchComparisonResults, 500);
+                            
+                            // Populate the table
+                            const tableBody = document.getElementById('comparisonTableBody');
+                            tableBody.innerHTML = '';
+                            
+                            combinedResults.forEach(table => {
+                                tableBody.innerHTML += createTableRow(table);
+                            });
+                            
+                            // Set up event listeners for the toggle buttons
+                            setupToggleDetails();
+                            
+                            // Set up event listeners for CREATE TABLE script buttons
+                            document.querySelectorAll('.view-create-script').forEach(button => {
+                                button.addEventListener('click', function() {
+                                    const tableName = this.getAttribute('data-table');
+                                    
+                                    // Show the modal
+                                    const modal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
+                                    modal.show();
+                                    
+                                    // Update modal title
+                                    document.getElementById('scriptComparisonModalLabel').textContent = 
+                                        `CREATE TABLE Script Comparison: ${tableName}`;
+                                    
+                                    // Show loading indicator
+                                    document.getElementById('loadingScripts').style.display = 'block';
+                                    document.getElementById('diffContent').style.display = 'none';
+                                    
+                                    // Reset views
+                                    document.getElementById('scriptDiffView').style.display = 'block';
+                                    document.getElementById('scriptSourceView').style.display = 'none';
+                                    document.getElementById('scriptTargetView').style.display = 'none';
+                                    
+                                    // Set active button
+                                    document.getElementById('viewDiffBtn').classList.add('active');
+                                    document.getElementById('viewSourceBtn').classList.remove('active');
+                                    document.getElementById('viewTargetBtn').classList.remove('active');
+                                    
+                                    // Fetch the CREATE TABLE scripts
+                                    fetch(`/comparison/api/create_table_script/${tableName}`)
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            if (data.status === 'success') {
+                                                const comparison = data.comparison;
+                                                
+                                                // Update the diff view
+                                                document.getElementById('diffContent').innerHTML = comparison.diff_html;
+                                                document.getElementById('loadingScripts').style.display = 'none';
+                                                document.getElementById('diffContent').style.display = 'block';
+                                                
+                                                // Update source and target views
+                                                document.getElementById('sourceScript').textContent = comparison.source_script;
+                                                document.getElementById('targetScript').textContent = comparison.target_script;
+                                            } else {
+                                                document.getElementById('loadingScripts').innerHTML = 
+                                                    `<div class="alert alert-danger">Error: ${data.message}</div>`;
+                                            }
+                                        })
+                                        .catch(error => {
+                                            document.getElementById('loadingScripts').innerHTML = 
+                                                `<div class="alert alert-danger">Error fetching scripts: ${error.message}</div>`;
+                                        });
+                                });
+                            });
+                        } else {
+                            // More tables to process, fetch next batch
+                            setTimeout(() => {
+                                fetchComparisonResults(data.next_offset, combinedResults);
+                            }, 100);
                         }
                     } else {
-                        console.error('Error:', data.message);
-                        document.getElementById('progressStatus').textContent = 'Error: ' + data.message;
+                        // Error occurred
+                        document.getElementById('progressStatus').textContent = `Error: ${data.message}`;
+                        document.getElementById('progressBar').classList.add('bg-danger');
                     }
                 })
                 .catch(error => {
-                    console.error('Fetch error:', error);
-                    document.getElementById('progressStatus').textContent = 'Error: ' + error.message;
+                    document.getElementById('progressStatus').textContent = `Error: ${error.message}`;
+                    document.getElementById('progressBar').classList.add('bg-danger');
                 });
         }
-
+        
         // Start fetching comparison results
         setTimeout(fetchComparisonResults, 1000);
-        {% else %}
+        
         // Set up toggle details for static content
         setupToggleDetails();
-        {% endif %}
     });
 </script>
 {% endblock %}
-{% endblock %}
+
+<style>
+    /* Styles for the diff view */
+    .diff-line {
+        font-family: monospace;
+        white-space: pre;
+        padding: 2px 5px;
+        line-height: 1.5;
+    }
+    
+    .diff-added {
+        background-color: #e6ffed;
+        color: #22863a;
+    }
+    
+    .diff-removed {
+        background-color: #ffeef0;
+        color: #cb2431;
+    }
+    
+    .diff-header {
+        background-color: #f1f8ff;
+        color: #0366d6;
+    }
+    
+    .diff-file-header {
+        background-color: #f6f8fa;
+        color: #586069;
+        font-weight: bold;
+    }
+    
+    .diff-context {
+        color: #24292e;
+    }
+</style>

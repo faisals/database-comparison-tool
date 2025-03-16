@@ -4,6 +4,8 @@ Utility functions for database comparison.
 import pandas as pd
 import numpy as np
 from deepdiff import DeepDiff
+import difflib
+import html
 
 def compare_schemas(schema1, schema2):
     """Compare two table schemas and return differences using DeepDiff"""
@@ -98,6 +100,69 @@ def compare_schemas(schema1, schema2):
         'total_columns_schema1': total_columns_schema1,
         'total_columns_schema2': total_columns_schema2,
         'identical_columns': identical_columns
+    }
+
+def compare_create_table_scripts(script1, script2):
+    """
+    Compare two CREATE TABLE scripts and return a unified diff with HTML formatting
+    
+    Args:
+        script1 (str): The first CREATE TABLE script (source)
+        script2 (str): The second CREATE TABLE script (target)
+        
+    Returns:
+        dict: Dictionary containing the comparison results
+            - has_differences (bool): Whether there are differences between the scripts
+            - diff_html (str): HTML-formatted unified diff
+            - source_script (str): Original source script
+            - target_script (str): Original target script
+    """
+    # Split scripts into lines for comparison
+    script1_lines = script1.splitlines()
+    script2_lines = script2.splitlines()
+    
+    # Generate unified diff
+    diff = difflib.unified_diff(
+        script1_lines, 
+        script2_lines,
+        fromfile='Source Database',
+        tofile='Target Database',
+        lineterm=''
+    )
+    
+    # Convert diff to list and check if there are differences
+    diff_list = list(diff)
+    has_differences = len(diff_list) > 0
+    
+    # Format diff as HTML
+    diff_html = []
+    for line in diff_list:
+        if line.startswith('+'):
+            # Added line (in target, not in source)
+            formatted_line = f'<div class="diff-line diff-added">{html.escape(line)}</div>'
+        elif line.startswith('-'):
+            # Removed line (in source, not in target)
+            formatted_line = f'<div class="diff-line diff-removed">{html.escape(line)}</div>'
+        elif line.startswith('@@'):
+            # Diff header
+            formatted_line = f'<div class="diff-line diff-header">{html.escape(line)}</div>'
+        elif line.startswith('---') or line.startswith('+++'):
+            # File header
+            formatted_line = f'<div class="diff-line diff-file-header">{html.escape(line)}</div>'
+        else:
+            # Context line (unchanged)
+            formatted_line = f'<div class="diff-line diff-context">{html.escape(line)}</div>'
+        
+        diff_html.append(formatted_line)
+    
+    # Join HTML lines
+    diff_html_str = '\n'.join(diff_html)
+    
+    return {
+        'has_differences': has_differences,
+        'diff_html': diff_html_str,
+        'source_script': script1,
+        'target_script': script2
     }
 
 def compare_data(data1, data2, common_columns):
@@ -202,22 +267,19 @@ def compare_data(data1, data2, common_columns):
             
             if row_diffs:
                 differences.append({
-                    'row': i + 1,  # 1-based indexing for display
+                    'row_index': i,
                     'differences': row_diffs
                 })
                 rows_with_differences += 1
     
-    # Create summary
-    summary = {
-        'source_total_rows': data1['total_rows'],
-        'target_total_rows': data2['total_rows'],
-        'total_rows_compared': min_rows,
-        'rows_with_differences': rows_with_differences,
-        'columns_compared': columns_to_compare,
-        'row_count_difference': abs(data1['total_rows'] - data2['total_rows'])
-    }
-    
     return {
-        'summary': summary,
+        'summary': {
+            'source_total_rows': data1['total_rows'],
+            'target_total_rows': data2['total_rows'],
+            'total_rows_compared': min_rows,
+            'rows_with_differences': rows_with_differences,
+            'columns_compared': columns_to_compare,
+            'row_count_difference': abs(data1['total_rows'] - data2['total_rows'])
+        },
         'data_differences': differences
     }

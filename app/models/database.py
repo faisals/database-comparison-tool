@@ -112,6 +112,138 @@ class DatabaseConnection:
         
         return columns
     
+    def get_create_table_script(self, table_name):
+        """Generate CREATE TABLE script for the specified table"""
+        # Get schema information
+        schema_info = self.get_table_schema(table_name)
+        
+        # Start building the CREATE TABLE script
+        script = f"CREATE TABLE [{table_name}] (\n"
+        
+        # Add columns
+        column_definitions = []
+        primary_keys = []
+        
+        for column in schema_info:
+            column_def = f"    [{column['name']}] {column['formatted_data_type']}"
+            
+            # Add NULL/NOT NULL constraint
+            column_def += " NOT NULL" if column['is_nullable'] == 'No' else " NULL"
+            
+            # Add IDENTITY specification
+            if column['is_identity'] == 'Yes':
+                column_def += " IDENTITY(1,1)"
+                
+            # Track primary keys
+            if column['is_primary_key'] == 'Yes':
+                primary_keys.append(column['name'])
+                
+            column_definitions.append(column_def)
+        
+        # Add primary key constraint if exists
+        if primary_keys:
+            pk_constraint = f"    CONSTRAINT [PK_{table_name}] PRIMARY KEY CLUSTERED (\n"
+            pk_constraint += ",\n".join([f"        [{pk}]" for pk in primary_keys])
+            pk_constraint += "\n    )"
+            column_definitions.append(pk_constraint)
+        
+        # Complete the script
+        script += ",\n".join(column_definitions)
+        script += "\n);"
+        
+        # Get foreign key constraints
+        query = """
+        SELECT 
+            fk.name AS FK_NAME,
+            OBJECT_NAME(fk.parent_object_id) AS TABLE_NAME,
+            COL_NAME(fkc.parent_object_id, fkc.parent_column_id) AS COLUMN_NAME,
+            OBJECT_NAME(fk.referenced_object_id) AS REFERENCED_TABLE_NAME,
+            COL_NAME(fkc.referenced_object_id, fkc.referenced_column_id) AS REFERENCED_COLUMN_NAME
+        FROM 
+            sys.foreign_keys AS fk
+        INNER JOIN 
+            sys.foreign_key_columns AS fkc ON fk.OBJECT_ID = fkc.constraint_object_id
+        WHERE 
+            OBJECT_NAME(fk.parent_object_id) = %s
+        ORDER BY 
+            fk.name
+        """
+        
+        try:
+            self.cursor.execute(query, (table_name,))
+            fk_constraints = {}
+            
+            for row in self.cursor.fetchall():
+                fk_name = row[0]
+                if fk_name not in fk_constraints:
+                    fk_constraints[fk_name] = {
+                        'table': row[1],
+                        'columns': [],
+                        'ref_table': row[3],
+                        'ref_columns': []
+                    }
+                    
+                fk_constraints[fk_name]['columns'].append(row[2])
+                fk_constraints[fk_name]['ref_columns'].append(row[4])
+                
+            # Add foreign key constraints to the script
+            for fk_name, fk_info in fk_constraints.items():
+                fk_script = f"\nALTER TABLE [{fk_info['table']}] ADD CONSTRAINT [{fk_name}] FOREIGN KEY ("
+                fk_script += ", ".join([f"[{col}]" for col in fk_info['columns']])
+                fk_script += f") REFERENCES [{fk_info['ref_table']}] ("
+                fk_script += ", ".join([f"[{col}]" for col in fk_info['ref_columns']])
+                fk_script += ");"
+                
+                script += fk_script
+                
+            # Get indexes
+            query = """
+            SELECT 
+                i.name AS INDEX_NAME,
+                i.is_unique,
+                i.is_primary_key,
+                COL_NAME(ic.object_id, ic.column_id) AS COLUMN_NAME
+            FROM 
+                sys.indexes AS i
+            INNER JOIN 
+                sys.index_columns AS ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+            WHERE 
+                OBJECT_NAME(i.object_id) = %s
+                AND i.is_primary_key = 0  -- Exclude primary keys as they're already handled
+            ORDER BY 
+                i.name, ic.key_ordinal
+            """
+            
+            self.cursor.execute(query, (table_name,))
+            indexes = {}
+            
+            for row in self.cursor.fetchall():
+                index_name = row[0]
+                is_unique = row[1]
+                column_name = row[3]
+                
+                if index_name not in indexes:
+                    indexes[index_name] = {
+                        'is_unique': is_unique,
+                        'columns': []
+                    }
+                    
+                indexes[index_name]['columns'].append(column_name)
+                
+            # Add index definitions to the script
+            for index_name, index_info in indexes.items():
+                unique_text = "UNIQUE " if index_info['is_unique'] else ""
+                index_script = f"\nCREATE {unique_text}INDEX [{index_name}] ON [{table_name}] ("
+                index_script += ", ".join([f"[{col}]" for col in index_info['columns']])
+                index_script += ");"
+                
+                script += index_script
+                
+        except Exception as e:
+            print(f"Error getting constraints and indexes: {e}")
+            
+        return script
+    
     def get_table_data(self, table_name, columns=None, limit=50):
         """Get sample data from a table with optional column selection"""
         if columns:
