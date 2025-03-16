@@ -246,33 +246,30 @@ class DatabaseConnection:
     
     def get_table_data(self, table_name, columns=None, limit=50):
         """Get sample data from a table with optional column selection"""
-        if columns:
-            column_list = ", ".join([f"[{col}]" for col in columns])
-        else:
-            column_list = "*"
+        # Ensure we have a valid list of columns
+        if not columns:
+            # Get all column names from schema if no columns specified
+            schema = self.get_table_schema(table_name)
+            columns = [col['name'] for col in schema]
             
+        # Build column list for query
+        column_list = ", ".join([f"[{col}]" for col in columns])
         query = f"SELECT TOP {limit} {column_list} FROM [{table_name}]"
         
         try:
             self.cursor.execute(query)
             rows = self.cursor.fetchall()
             
-            # Get column names
-            if columns:
-                column_names = columns
-            else:
-                column_names = [column[0] for column in self.cursor.description]
-                
             # Convert to list of dicts for easier processing
             result = []
             for row in rows:
                 row_dict = {}
-                for i, col in enumerate(column_names):
+                for i, col in enumerate(columns):
                     row_dict[col] = row[i]
                 result.append(row_dict)
                 
             return {
-                'columns': column_names,
+                'columns': columns,
                 'rows': result,
                 'total_rows': len(result)
             }

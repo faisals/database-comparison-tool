@@ -380,4 +380,4 @@ def format_data_as_html(data):
     return html
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5006, use_reloader=True, reloader_type='stat')
+    app.run(debug=True, port=5007, use_reloader=True, reloader_type='stat')

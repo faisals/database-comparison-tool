@@ -30,8 +30,8 @@ def compare_db_schemas(db1, db2, table1, table2, selected_columns):
 def compare_db_data(db1, db2, table1, table2, selected_columns):
     """Compare data between two database tables"""
     # Get data for both tables
-    data1 = db1.get_table_data(table1, selected_columns)
-    data2 = db2.get_table_data(table2, selected_columns)
+    data1 = db1.get_table_data(table1, columns=selected_columns)
+    data2 = db2.get_table_data(table2, columns=selected_columns)
     
     # Use the utility function to compare the data
     return compare_data(data1, data2, selected_columns)
@@ -478,7 +478,7 @@ def select_columns():
         db1.disconnect()
         db2.disconnect()
 
-@comparison_bp.route('/compare_results', methods=['GET'])
+@comparison_bp.route('/compare_results', methods=['GET', 'POST'])
 def compare_results():
     """Display comparison results"""
     # Get connection, table, and column names from session
@@ -528,6 +528,16 @@ def compare_results():
         return redirect(url_for('main.index'))
     
     try:
+        # Get schema for both tables to find common columns
+        schema1 = db1.get_table_schema(table1)
+        schema2 = db2.get_table_schema(table2)
+        
+        # If no columns selected, use all common columns
+        if not selected_columns:
+            columns1 = [col['name'] for col in schema1]
+            columns2 = [col['name'] for col in schema2]
+            selected_columns = list(set(columns1) & set(columns2))
+        
         # Compare data between tables
         comparison_result = compare_db_data(db1, db2, table1, table2, selected_columns)
         
