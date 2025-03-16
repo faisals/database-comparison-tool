@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Database Connection{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Edit Database Connection</h1>
+    
+    <form method="POST" action="{{ url_for('connections.edit_connection', connection_name=connection_name) }}">
+        {{ form.hidden_tag() }}
+        
+        <div class="mb-3">
+            {{ form.connection_name.label(class="form-label") }}
+            {{ form.connection_name(class="form-control") }}
+            {% if form.connection_name.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.connection_name.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.server.label(class="form-label") }}
+            {{ form.server(class="form-control") }}
+            {% if form.server.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.server.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.database.label(class="form-label") }}
+            {{ form.database(class="form-control") }}
+            {% if form.database.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.database.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control") }}
+            {% if form.username.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.username.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control") }}
+            {% if form.password.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.password.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            {{ form.driver.label(class="form-label") }}
+            {{ form.driver(class="form-control") }}
+            {% if form.driver.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.driver.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('connections.list_connections') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

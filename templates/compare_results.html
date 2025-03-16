@@ -1,0 +1,708 @@
+{% extends "base.html" %}
+
+{% block title %}Comparison Results{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Comparison Results</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">Table Comparison Results</h2>
+                <div>
+                    <button class="btn btn-sm btn-light me-2" onclick="window.print()">
+                        <i class="bi bi-printer"></i> Print Report
+                    </button>
+                    <a href="{{ url_for('comparison.select_columns', conn1=source_connection, conn2=target_connection, table1=table1, table2=table2) }}" class="btn btn-sm btn-light">
+                        <i class="bi bi-arrow-repeat"></i> Change Columns
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info comparison-summary">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Source</h5>
+                        <p class="mb-1"><strong>Connection:</strong> {{ source_connection }}</p>
+                        <p class="mb-0"><strong>Table:</strong> {{ table1 }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Target</h5>
+                        <p class="mb-1"><strong>Connection:</strong> {{ target_connection }}</p>
+                        <p class="mb-0"><strong>Table:</strong> {{ table2 }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <p class="mb-1"><strong>Report Generated:</strong> {{ timestamp }}</p>
+                        {% if selected_columns %}
+                        <p class="mb-0"><strong>Columns Selected:</strong> {{ selected_columns|join(', ') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs" id="comparisonTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="schema-tab" data-bs-toggle="tab" data-bs-target="#schema" type="button" role="tab" aria-controls="schema" aria-selected="true">
+                        <i class="bi bi-table"></i> Schema Comparison
+                    </button>
+                </li>
+                {% if data_comparison %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="data-tab" data-bs-toggle="tab" data-bs-target="#data" type="button" role="tab" aria-controls="data" aria-selected="false">
+                        <i class="bi bi-database-check"></i> Data Comparison
+                    </button>
+                </li>
+                {% endif %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="visualization-tab" data-bs-toggle="tab" data-bs-target="#visualization" type="button" role="tab" aria-controls="visualization" aria-selected="false">
+                        <i class="bi bi-bar-chart"></i> Visualization
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content p-3 border border-top-0 rounded-bottom" id="comparisonTabsContent">
+                <!-- Schema Comparison Tab -->
+                <div class="tab-pane fade show active" id="schema" role="tabpanel" aria-labelledby="schema-tab">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0">Identical Columns ({{ schema_comparison.common_columns|length - schema_comparison.differences|length }})</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% set diff_columns = schema_comparison.differences|map(attribute='column_name')|list %}
+                                    {% if schema_comparison.common_columns|length - diff_columns|length > 0 %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Column Name</th>
+                                                        <th>Data Type</th>
+                                                        <th>Nullable</th>
+                                                        <th>Primary Key</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for col_name in schema_comparison.common_columns %}
+                                                        {% if col_name not in diff_columns %}
+                                                            {% for col in source_schema %}
+                                                                {% if col.name == col_name %}
+                                                                <tr>
+                                                                    <td>{{ col.name }}</td>
+                                                                    <td>{{ col.formatted_data_type }}</td>
+                                                                    <td>{{ col.is_nullable }}</td>
+                                                                    <td>{{ col.is_primary_key }}</td>
+                                                                </tr>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-warning">
+                                            <i class="bi bi-exclamation-triangle"></i> No identical columns found.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">Columns with Differences ({{ schema_comparison.differences|length }})</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if schema_comparison.differences %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Column Name</th>
+                                                        <th>Source</th>
+                                                        <th>Target</th>
+                                                        <th>Differences</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for diff in schema_comparison.differences %}
+                                                    <tr>
+                                                        <td>{{ diff.column_name }}</td>
+                                                        <td>{{ diff.source.formatted_data_type }}</td>
+                                                        <td>{{ diff.target.formatted_data_type }}</td>
+                                                        <td>
+                                                            <ul class="mb-0 ps-3">
+                                                                {% for d in diff.differences %}
+                                                                <li><small>{{ d }}</small></li>
+                                                                {% endfor %}
+                                                            </ul>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-success">
+                                            <i class="bi bi-check-circle"></i> No differences found in common columns.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">Columns Only in Source ({{ schema_comparison.only_in_source|length }})</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if schema_comparison.only_in_source %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Column Name</th>
+                                                        <th>Data Type</th>
+                                                        <th>Nullable</th>
+                                                        <th>Primary Key</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for col_name in schema_comparison.only_in_source %}
+                                                        {% for col in source_schema %}
+                                                            {% if col.name == col_name %}
+                                                            <tr>
+                                                                <td>{{ col.name }}</td>
+                                                                <td>{{ col.formatted_data_type }}</td>
+                                                                <td>{{ col.is_nullable }}</td>
+                                                                <td>{{ col.is_primary_key }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-success">
+                                            <i class="bi bi-check-circle"></i> No columns unique to source.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-secondary text-white">
+                                    <h5 class="mb-0">Columns Only in Target ({{ schema_comparison.only_in_target|length }})</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if schema_comparison.only_in_target %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Column Name</th>
+                                                        <th>Data Type</th>
+                                                        <th>Nullable</th>
+                                                        <th>Primary Key</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for col_name in schema_comparison.only_in_target %}
+                                                        {% for col in target_schema %}
+                                                            {% if col.name == col_name %}
+                                                            <tr>
+                                                                <td>{{ col.name }}</td>
+                                                                <td>{{ col.formatted_data_type }}</td>
+                                                                <td>{{ col.is_nullable }}</td>
+                                                                <td>{{ col.is_primary_key }}</td>
+                                                            </tr>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-success">
+                                            <i class="bi bi-check-circle"></i> No columns unique to target.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Comparison Tab -->
+                {% if data_comparison %}
+                <div class="tab-pane fade" id="data" role="tabpanel" aria-labelledby="data-tab">
+                    <!-- Data Comparison Summary -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Data Comparison Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Total Rows Compared</h6>
+                                            <p class="diff-count mb-0">{{ data_comparison.total_rows }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Identical Rows</h6>
+                                            <p class="diff-count mb-0">{{ data_comparison.identical_rows }}</p>
+                                            <span class="diff-badge bg-light text-dark">
+                                                {{ (data_comparison.identical_rows / data_comparison.total_rows * 100)|round(1) }}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-center mb-3">
+                                    <div class="card bg-danger text-white">
+                                        <div class="card-body">
+                                            <h6 class="card-title">Different Rows</h6>
+                                            <p class="diff-count mb-0">{{ data_comparison.different_rows }}</p>
+                                            <span class="diff-badge bg-light text-dark">
+                                                {{ (data_comparison.different_rows / data_comparison.total_rows * 100)|round(1) }}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-exclamation-triangle"></i> 
+                                <strong>Note:</strong> Data comparison was limited to {{ data_comparison.row_limit }} rows. 
+                                {% if data_comparison.source_only_rows or data_comparison.target_only_rows %}
+                                <p class="mb-0 mt-2">
+                                    <strong>Additional Information:</strong>
+                                    {% if data_comparison.source_only_rows %}
+                                    <span class="badge bg-primary">{{ data_comparison.source_only_rows }} rows only in source</span>
+                                    {% endif %}
+                                    {% if data_comparison.target_only_rows %}
+                                    <span class="badge bg-secondary">{{ data_comparison.target_only_rows }} rows only in target</span>
+                                    {% endif %}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Differences -->
+                    {% if data_comparison.differences %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-exclamation-diamond"></i> Data Differences</h5>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-dark toggle-diff-only" data-table-id="differences-table" data-show-diff-only="false">
+                                        <i class="bi bi-eye-slash"></i> Show Differences Only
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="differences-table-filter" placeholder="Filter results...">
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover diff-table" id="differences-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Key</th>
+                                            {% for col in data_comparison.compared_columns %}
+                                            <th>{{ col }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for diff in data_comparison.differences %}
+                                        <tr class="diff-row">
+                                            <td><strong>{{ diff.key }}</strong></td>
+                                            {% for col in data_comparison.compared_columns %}
+                                            <td class="{% if col in diff.different_columns %}diff-changed{% endif %}">
+                                                {% if col in diff.different_columns %}
+                                                <div>
+                                                    <span class="badge bg-primary">Source:</span> {{ diff.source[col] }}
+                                                </div>
+                                                <div>
+                                                    <span class="badge bg-secondary">Target:</span> {{ diff.target[col] }}
+                                                </div>
+                                                {% else %}
+                                                {{ diff.source[col] }}
+                                                {% endif %}
+                                            </td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Data Samples -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0"><i class="bi bi-table"></i> Source Data Sample</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead>
+                                                <tr>
+                                                    {% for col in data_comparison.compared_columns %}
+                                                    <th>{{ col }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for row in data_comparison.source_sample %}
+                                                <tr>
+                                                    {% for col in data_comparison.compared_columns %}
+                                                    <td>{{ row[col] }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-secondary text-white">
+                                    <h5 class="mb-0"><i class="bi bi-table"></i> Target Data Sample</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead>
+                                                <tr>
+                                                    {% for col in data_comparison.compared_columns %}
+                                                    <th>{{ col }}</th>
+                                                    {% endfor %}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for row in data_comparison.target_sample %}
+                                                <tr>
+                                                    {% for col in data_comparison.compared_columns %}
+                                                    <td>{{ row[col] }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Visualization Tab -->
+                <div class="tab-pane fade" id="visualization" role="tabpanel" aria-labelledby="visualization-tab">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">Schema Comparison Chart</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="comparison-chart-container" style="height: 300px;">
+                                        <canvas id="schemaComparisonChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">Column Distribution</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="comparison-chart-container" style="height: 300px;">
+                                        <canvas id="columnDistributionChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if data_comparison %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">Data Comparison Chart</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="comparison-chart-container" style="height: 300px;">
+                                        <canvas id="dataComparisonChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">Row Count Comparison</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="comparison-chart-container" style="height: 300px;">
+                                        <canvas id="rowCountChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize chart.js visualizations if they exist
+        if (typeof Chart !== 'undefined') {
+            // Schema comparison chart
+            const schemaCtx = document.getElementById('schemaComparisonChart');
+            if (schemaCtx) {
+                new Chart(schemaCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Common Columns', 'Differences', 'Only in Source', 'Only in Target'],
+                        datasets: [{
+                            label: 'Schema Comparison',
+                            data: [
+                                {{ schema_comparison.common_columns|length - schema_comparison.differences|length }},
+                                {{ schema_comparison.differences|length }},
+                                {{ schema_comparison.only_in_source|length }},
+                                {{ schema_comparison.only_in_target|length }}
+                            ],
+                            backgroundColor: [
+                                'rgba(40, 167, 69, 0.7)',
+                                'rgba(255, 193, 7, 0.7)',
+                                'rgba(0, 123, 255, 0.7)',
+                                'rgba(108, 117, 125, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(40, 167, 69, 1)',
+                                'rgba(255, 193, 7, 1)',
+                                'rgba(0, 123, 255, 1)',
+                                'rgba(108, 117, 125, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.raw + ' columns';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Data comparison chart
+            {% if data_comparison %}
+            const dataComparisonCtx = document.getElementById('dataComparisonChart');
+            if (dataComparisonCtx) {
+                new Chart(dataComparisonCtx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Identical Rows', 'Different Rows'],
+                        datasets: [{
+                            data: [
+                                {{ data_comparison.identical_rows }},
+                                {{ data_comparison.different_rows }}
+                            ],
+                            backgroundColor: [
+                                'rgba(40, 167, 69, 0.7)',
+                                'rgba(220, 53, 69, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(40, 167, 69, 1)',
+                                'rgba(220, 53, 69, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const total = {{ data_comparison.total_rows }};
+                                        const percentage = Math.round((value / total) * 100);
+                                        return value + ' rows (' + percentage + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Row count comparison chart
+            const rowCountCtx = document.getElementById('rowCountChart');
+            if (rowCountCtx) {
+                new Chart(rowCountCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Source', 'Target'],
+                        datasets: [{
+                            label: 'Total Rows',
+                            data: [
+                                {{ data_comparison.source_total_rows }},
+                                {{ data_comparison.target_total_rows }}
+                            ],
+                            backgroundColor: [
+                                'rgba(0, 123, 255, 0.7)',
+                                'rgba(108, 117, 125, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(0, 123, 255, 1)',
+                                'rgba(108, 117, 125, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.raw + ' rows';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            {% endif %}
+        }
+        
+        // Toggle diff-only view
+        const diffToggleBtns = document.querySelectorAll('.toggle-diff-only');
+        diffToggleBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const tableId = this.getAttribute('data-table-id');
+                const table = document.getElementById(tableId);
+                if (table) {
+                    const rows = table.querySelectorAll('tbody tr');
+                    const showDiffOnly = this.getAttribute('data-show-diff-only') === 'true';
+                    
+                    rows.forEach(row => {
+                        if (showDiffOnly && !row.classList.contains('diff-row')) {
+                            row.style.display = 'none';
+                        } else {
+                            row.style.display = '';
+                        }
+                    });
+                    
+                    // Toggle state
+                    this.setAttribute('data-show-diff-only', showDiffOnly ? 'false' : 'true');
+                    this.innerHTML = showDiffOnly ? 
+                        '<i class="bi bi-eye"></i> Show All Rows' : 
+                        '<i class="bi bi-eye-slash"></i> Show Differences Only';
+                }
+            });
+        });
+        
+        // Filter table functionality
+        const tableFilters = document.querySelectorAll('[id$="-filter"]');
+        tableFilters.forEach(filter => {
+            filter.addEventListener('input', function() {
+                const tableId = this.id.replace('-filter', '');
+                const table = document.getElementById(tableId);
+                if (table) {
+                    const filterValue = this.value.toLowerCase();
+                    const rows = table.querySelectorAll('tbody tr');
+                    
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        if (text.includes(filterValue)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Select Columns to Compare{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="#" onclick="history.back()">Select Tables</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Select Columns</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Select Columns to Compare</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> You are comparing:
+                        <ul class="mb-0">
+                            <li><strong>Source:</strong> {{ source_connection }} - {{ table1 }}</li>
+                            <li><strong>Target:</strong> {{ target_connection }} - {{ table2 }}</li>
+                        </ul>
+                    </div>
+
+                    <form action="{{ url_for('comparison.compare_results') }}" method="post">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Column Selection</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="select-all-columns">
+                                                <label class="form-check-label" for="select-all-columns">
+                                                    <strong>Select All Columns</strong>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="text" class="form-control" id="column-filter" placeholder="Filter columns...">
+                                        </div>
+                                        <div class="column-list" style="max-height: 300px; overflow-y: auto;">
+                                            {% for choice in form.columns.choices %}
+                                            <div class="form-check column-item">
+                                                <input class="form-check-input column-checkbox" type="checkbox" name="columns" value="{{ choice[0] }}" id="column-{{ loop.index }}">
+                                                <label class="form-check-label" for="column-{{ loop.index }}">
+                                                    {{ choice[0] }}
+                                                    {% if choice[0] in source_schema|map(attribute='name') and choice[0] in target_schema|map(attribute='name') %}
+                                                        <span class="badge bg-success">Both</span>
+                                                    {% elif choice[0] in source_schema|map(attribute='name') %}
+                                                        <span class="badge bg-primary">Source Only</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Target Only</span>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card h-100">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">Data Comparison Options</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="compare-data" name="compare_data" checked>
+                                            <label class="form-check-label" for="compare-data">
+                                                Compare Data (not just schema)
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="mb-3" id="row-limit-container">
+                                            <label for="row-limit" class="form-label">Row Limit for Data Comparison</label>
+                                            <select class="form-select" id="row-limit" name="row_limit">
+                                                <option value="10">10 rows</option>
+                                                <option value="50" selected>50 rows</option>
+                                                <option value="100">100 rows</option>
+                                                <option value="500">500 rows</option>
+                                            </select>
+                                            <div class="form-text">
+                                                Higher limits may take longer to process.
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="alert alert-warning">
+                                            <i class="bi bi-exclamation-triangle"></i> 
+                                            <strong>Note:</strong> Data comparison will only work for columns that exist in both tables.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="#" onclick="history.back()" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check2-circle"></i> Compare Tables
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select all columns functionality
+        const selectAllCheckbox = document.getElementById('select-all-columns');
+        const columnCheckboxes = document.querySelectorAll('.column-checkbox');
+        
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            columnCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+        });
+        
+        // Filter columns functionality
+        const filterInput = document.getElementById('column-filter');
+        const columnItems = document.querySelectorAll('.column-item');
+        
+        filterInput.addEventListener('input', function() {
+            const filterText = this.value.toLowerCase();
+            
+            columnItems.forEach(item => {
+                const label = item.querySelector('label').textContent.toLowerCase();
+                if (label.includes(filterText)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+        
+        // Toggle row limit based on compare data checkbox
+        const compareDataCheckbox = document.getElementById('compare-data');
+        const rowLimitContainer = document.getElementById('row-limit-container');
+        
+        compareDataCheckbox.addEventListener('change', function() {
+            rowLimitContainer.style.display = this.checked ? 'block' : 'none';
+        });
+        
+        // Initial state
+        rowLimitContainer.style.display = compareDataCheckbox.checked ? 'block' : 'none';
+        
+        // Check for common columns by default
+        columnCheckboxes.forEach(checkbox => {
+            const label = checkbox.nextElementSibling;
+            if (label.innerHTML.includes('Both')) {
+                checkbox.checked = true;
+            }
+        });
+    });
+</script>
+{% endblock %}

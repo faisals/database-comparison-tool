@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Database Table Comparison Tool - Home{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0"><i class="bi bi-database-fill-gear"></i> Database Table Comparison Tool</h2>
+                </div>
+                <div class="card-body">
+                    {% if no_connections %}
+                        <div class="alert alert-warning">
+                            <h4 class="alert-heading">No Saved Connections</h4>
+                            <p>You don't have any database connections set up yet. Please add a new connection to get started:</p>
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('connections.add_connection') }}" class="btn btn-success btn-lg">
+                                    <i class="bi bi-plus-circle"></i> Add New Database Connection
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="lead">Compare table structures and data between different database versions.</p>
+                        
+                        <div class="alert alert-info mb-4">
+                            <h5><i class="bi bi-info-circle"></i> Features</h5>
+                            <ul class="mb-0">
+                                <li><strong>Schema Comparison:</strong> Compare table structures including column types and properties</li>
+                                <li><strong>Column Selection:</strong> Choose specific columns to include in your comparison</li>
+                                <li><strong>Data Comparison:</strong> Identify differences in data between tables</li>
+                                <li><strong>Visualization:</strong> View comparison results with charts and visual indicators</li>
+                                <li><strong>Export:</strong> Print or save comparison reports</li>
+                            </ul>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('main.index') }}">
+                            {{ form.hidden_tag() }}
+                            <div class="mb-3">
+                                <label for="connection1" class="form-label"><i class="bi bi-database"></i> {{ form.connection1.label }}</label>
+                                {{ form.connection1(class="form-select") }}
+                                <div class="form-text">Select the source database connection</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="connection2" class="form-label"><i class="bi bi-database"></i> {{ form.connection2.label }}</label>
+                                {{ form.connection2(class="form-select") }}
+                                <div class="form-text">Select the target database connection</div>
+                            </div>
+                            <div class="d-grid">
+                                {{ form.submit(class="btn btn-primary btn-lg") }}
+                            </div>
+                        </form>
+                        
+                        <div class="mt-3 text-center">
+                            <a href="{{ url_for('connections.add_connection') }}" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Add New Connection
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-light">
+                    <div class="accordion" id="connectionAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingConnections">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseConnections" aria-expanded="false" aria-controls="collapseConnections">
+                                    <strong>Available Connections</strong>
+                                </button>
+                            </h2>
+                            <div id="collapseConnections" class="accordion-collapse collapse" aria-labelledby="headingConnections" data-bs-parent="#connectionAccordion">
+                                <div class="accordion-body">
+                                    <ul class="list-group list-group-flush">
+                                        {% if not no_connections and form.connection1.choices %}
+                                            {% for choice in form.connection1.choices %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <span><i class="bi bi-hdd-network"></i> {{ choice[1] }}</span>
+                                                    <a href="{{ url_for('connections.remove_connection', connection_name=choice[1]) }}" 
+                                                       class="btn btn-sm btn-outline-danger"
+                                                       onclick="return confirm('Are you sure you want to remove this connection?');">
+                                                        <i class="bi bi-trash"></i>
+                                                    </a>
+                                                </li>
+                                            {% endfor %}
+                                        {% else %}
+                                            <li class="list-group-item">No connections available</li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="headingHelp">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHelp" aria-expanded="false" aria-controls="collapseHelp">
+                                    <strong>How to Use</strong>
+                                </button>
+                            </h2>
+                            <div id="collapseHelp" class="accordion-collapse collapse" aria-labelledby="headingHelp" data-bs-parent="#connectionAccordion">
+                                <div class="accordion-body">
+                                    <ol class="mb-0">
+                                        <li>Select source and target database connections</li>
+                                        <li>Choose tables to compare from each database</li>
+                                        <li>Select specific columns to include in the comparison</li>
+                                        <li>View detailed comparison results with visual indicators</li>
+                                        <li>Filter and analyze data differences</li>
+                                        <li>Print or save your comparison report</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Updates Card -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-stars"></i> Recent Updates</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <div class="feature-icon bg-primary text-white rounded-circle p-3 me-3">
+                            <i class="bi bi-database-add"></i>
+                        </div>
+                        <div>
+                            <h5>Add Database Connections</h5>
+                            <p class="mb-0">You can now add new database connections directly from the web interface, making it easier to set up and manage your connections.</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex align-items-start">
+                        <div class="feature-icon bg-primary text-white rounded-circle p-3 me-3">
+                            <i class="bi bi-columns-gap"></i>
+                        </div>
+                        <div>
+                            <h5>Column Selection</h5>
+                            <p class="mb-0">You can now select specific columns to include in your comparison, making it easier to focus on the data that matters most to you.</p>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex align-items-start">
+                        <div class="feature-icon bg-info text-white rounded-circle p-3 me-3">
+                            <i class="bi bi-bar-chart"></i>
+                        </div>
+                        <div>
+                            <h5>Enhanced Data Comparison</h5>
+                            <p class="mb-0">Improved visualization of data differences with filtering capabilities and detailed summaries of comparison results.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any JavaScript functionality needed for the index page
+    });
+</script>
+{% endblock %}

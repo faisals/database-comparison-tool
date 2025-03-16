@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Schema Comparison Results{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1>Database Schema Comparison</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Compared Databases</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Source Database:</h6>
+                    <p><strong>{{ conn1.name }}</strong> ({{ conn1.server }}/{{ conn1.database }})</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Target Database:</h6>
+                    <p><strong>{{ conn2.name }}</strong> ({{ conn2.server }}/{{ conn2.database }})</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Tables Comparison Summary</h5>
+            <div>
+                <button class="btn btn-sm btn-light" id="showAllTables">Show All Tables</button>
+                <button class="btn btn-sm btn-warning" id="showDifferencesOnly">Show Differences Only</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="tablesComparisonTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Source Database</th>
+                            <th>Target Database</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for table in schema_comparison %}
+                        <tr class="{% if table.differences %}table-row-diff{% else %}table-row-same{% endif %}">
+                            <td>{{ table.table_name }}</td>
+                            <td>
+                                {% if table.in_db1 %}
+                                    <span class="badge bg-success">Present</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Missing</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if table.in_db2 %}
+                                    <span class="badge bg-success">Present</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Missing</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not table.differences %}
+                                    <span class="badge bg-success">Identical</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Differences Found</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if table.in_db1 and table.in_db2 %}
+                                    <button class="btn btn-sm btn-primary toggle-details" data-table="{{ table.table_name }}">
+                                        Show Details
+                                    </button>
+                                {% else %}
+                                    <span class="text-muted">Not comparable</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if table.in_db1 and table.in_db2 %}
+                        <tr class="details-row" id="details-{{ table.table_name|replace(' ', '_')|replace('.', '_') }}" style="display: none;">
+                            <td colspan="5">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th>Column Name</th>
+                                                <th>Source Database</th>
+                                                <th>Target Database</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for column in table.columns %}
+                                            <tr class="{% if column.differences %}table-warning{% endif %}">
+                                                <td>{{ column.name }}</td>
+                                                <td>
+                                                    {% if column.in_db1 %}
+                                                        {{ column.db1_type }}
+                                                        {% if column.db1_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
+                                                        {% if column.db1_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
+                                                        {% if column.db1_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-danger">Missing</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if column.in_db2 %}
+                                                        {{ column.db2_type }}
+                                                        {% if column.db2_nullable == 'No' %}<span class="badge bg-secondary">NOT NULL</span>{% endif %}
+                                                        {% if column.db2_pk == 'Yes' %}<span class="badge bg-info">PK</span>{% endif %}
+                                                        {% if column.db2_identity == 'Yes' %}<span class="badge bg-dark">Identity</span>{% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-danger">Missing</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if not column.differences %}
+                                                        <span class="badge bg-success">Identical</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning">Different</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-between mb-4">
+        <a href="{{ url_for('comparison.select_comparison_type') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Comparison Type
+        </a>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+            <i class="fas fa-home"></i> Return to Home
+        </a>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle details rows
+        document.querySelectorAll('.toggle-details').forEach(button => {
+            button.addEventListener('click', function() {
+                const tableName = this.getAttribute('data-table');
+                const detailsRow = document.getElementById('details-' + tableName.replace(/\s/g, '_').replace(/\./g, '_'));
+                
+                if (detailsRow.style.display === 'none') {
+                    detailsRow.style.display = 'table-row';
+                    this.textContent = 'Hide Details';
+                } else {
+                    detailsRow.style.display = 'none';
+                    this.textContent = 'Show Details';
+                }
+            });
+        });
+        
+        // Show only differences
+        document.getElementById('showDifferencesOnly').addEventListener('click', function() {
+            document.querySelectorAll('.table-row-same').forEach(row => {
+                row.style.display = 'none';
+            });
+            document.querySelectorAll('.table-row-diff').forEach(row => {
+                row.style.display = 'table-row';
+            });
+        });
+        
+        // Show all tables
+        document.getElementById('showAllTables').addEventListener('click', function() {
+            document.querySelectorAll('.table-row-same, .table-row-diff').forEach(row => {
+                row.style.display = 'table-row';
+            });
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

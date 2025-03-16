@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Select Comparison Type - Database Table Comparison Tool{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-sliders me-2"></i>Select Comparison Type
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <strong>Source Connection:</strong> {{ conn1.connection_name }} ({{ conn1.server }}/{{ conn1.database }})<br>
+            <strong>Target Connection:</strong> {{ conn2.connection_name }} ({{ conn2.server }}/{{ conn2.database }})
+        </div>
+        
+        <form method="POST" action="{{ url_for('comparison.select_comparison_type') }}">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-4">
+                <label for="{{ form.comparison_type.id }}" class="form-label fw-bold">{{ form.comparison_type.label }}</label>
+                <div class="d-flex flex-column gap-3">
+                    {% for subfield in form.comparison_type %}
+                    <div class="form-check card p-3 hover-shadow">
+                        <div class="d-flex align-items-start">
+                            <input class="form-check-input me-2 mt-2" type="radio" name="{{ form.comparison_type.name }}"
+                                id="{{ subfield.id }}" value="{{ subfield.data }}" {% if loop.first %}checked{% endif %}>
+                            <div>
+                                <label class="form-check-label fw-bold" for="{{ subfield.id }}">
+                                    {{ subfield.label }}
+                                </label>
+                                <p class="mb-0 text-muted small">
+                                    {% if subfield.data == 'schema' %}
+                                    Compare table structures, columns, data types, and constraints across databases.
+                                    {% else %}
+                                    Compare actual data between tables in the selected databases.
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    {{ form.submit.label }}
+                    <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

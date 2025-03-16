@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Select Comparison Type{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Select Comparison Type</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Selected Connections</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Source Connection:</h6>
+                    <p><strong>{{ conn1.name }}</strong> ({{ conn1.server }}/{{ conn1.database }})</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Target Connection:</h6>
+                    <p><strong>{{ conn2.name }}</strong> ({{ conn2.server }}/{{ conn2.database }})</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Choose Comparison Type</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-3">
+                    {{ form.comparison_type.label(class="form-label") }}
+                    {{ form.comparison_type(class="form-select") }}
+                    {% if form.comparison_type.errors %}
+                        <div class="alert alert-danger mt-1">
+                            {% for error in form.comparison_type.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Comparison Types Explained</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl>
+                                <dt>Database Schema Comparison (Tables Only)</dt>
+                                <dd>
+                                    Compares the structure of all tables in both databases, including:
+                                    <ul>
+                                        <li>Table names and existence</li>
+                                        <li>Column definitions (names, data types, nullability)</li>
+                                        <li>Primary keys and identity columns</li>
+                                    </ul>
+                                    <p class="text-muted">Best for comparing database structure differences.</p>
+                                </dd>
+                                
+                                <dt>Table Data Comparison</dt>
+                                <dd>
+                                    Allows you to select specific tables and columns to compare actual data values between them.
+                                    <p class="text-muted">Best for comparing content differences in specific tables.</p>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

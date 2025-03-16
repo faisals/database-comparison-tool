@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Select Tables to Compare{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Select Tables</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">Select Tables to Compare</h2>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> You are comparing:
+                        <ul class="mb-0">
+                            <li><strong>Source:</strong> {{ conn1 }}</li>
+                            <li><strong>Target:</strong> {{ conn2 }}</li>
+                        </ul>
+                    </div>
+
+                    <form method="post" action="{{ url_for('comparison.select_tables', conn1=conn1, conn2=conn2) }}">
+                        {{ form.csrf_token }}
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="table1" class="form-label">
+                                        <i class="bi bi-database"></i> Source Table
+                                    </label>
+                                    {{ form.table1(class="form-select", id="table1") }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="table2" class="form-label">
+                                        <i class="bi bi-database"></i> Target Table
+                                    </label>
+                                    {{ form.table2(class="form-select", id="table2") }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('main.index') }}" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-arrow-right"></i> Next: Select Columns
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add filtering functionality for table dropdowns
+        const addFilterToSelect = (selectId) => {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            
+            // Create filter input
+            const filterContainer = document.createElement('div');
+            filterContainer.className = 'input-group mb-2';
+            
+            const filterInput = document.createElement('input');
+            filterInput.type = 'text';
+            filterInput.className = 'form-control';
+            filterInput.placeholder = 'Filter tables...';
+            
+            filterContainer.appendChild(filterInput);
+            select.parentNode.insertBefore(filterContainer, select);
+            
+            // Store original options
+            const originalOptions = Array.from(select.options);
+            
+            // Add filter functionality
+            filterInput.addEventListener('input', function() {
+                const filterText = this.value.toLowerCase();
+                
+                // Clear current options
+                select.innerHTML = '';
+                
+                // Add filtered options
+                originalOptions.forEach(option => {
+                    if (option.text.toLowerCase().includes(filterText)) {
+                        select.appendChild(option.cloneNode(true));
+                    }
+                });
+                
+                // If no options match, show a message
+                if (select.options.length === 0) {
+                    const noMatchOption = document.createElement('option');
+                    noMatchOption.text = 'No matching tables';
+                    noMatchOption.disabled = true;
+                    select.appendChild(noMatchOption);
+                }
+            });
+        };
+        
+        // Apply filtering to both selects
+        addFilterToSelect('table1');
+        addFilterToSelect('table2');
+    });
+</script>
+{% endblock %}
