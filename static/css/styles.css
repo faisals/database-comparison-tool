@@ -158,6 +158,29 @@ main {
     margin-left: 5px;
 }
 
+/* Custom button styles */
+.btn-primary {
+    background-color: #2196F3 !important;
+    border-color: #2196F3 !important;
+    color: #fff !important;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: #1976D2 !important;
+    border-color: #1976D2 !important;
+}
+
+.btn-secondary {
+    background-color: #6C757D !important;
+    border-color: #6C757D !important;
+    color: #fff !important;
+}
+
+.btn-secondary:hover, .btn-secondary:focus {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+}
+
 /* Data comparison results styles */
 .diff-added {
     background-color: #4CAF50;
