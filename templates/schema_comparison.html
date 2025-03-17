@@ -348,115 +348,171 @@
         });
         
         function createTableRow(table) {
-            const rowClass = table.differences ? 'diff-modified table-row-diff' : 'table-row-same';
+            // Create the table row
+            const row = document.createElement('tr');
+            row.className = table.differences ? 'table-warning' : '';
             
-            let html = `<tr class="${rowClass}">`;
-            html += `<td>${table.table_name}</td>`;
+            // Table name cell
+            const nameCell = document.createElement('td');
+            nameCell.textContent = table.table_name;
+            row.appendChild(nameCell);
             
-            // Source database column
-            html += '<td>';
-            if (table.in_db1) {
-                html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Present</span>';
-            } else {
-                html += '<span class="status-badge status-deleted"><i class="bi bi-x-circle-fill"></i> Missing</span>';
-            }
-            html += '</td>';
+            // Existence in source/target cells
+            const sourceCell = document.createElement('td');
+            sourceCell.innerHTML = table.in_db1 ? '<span class="text-success">✓</span>' : '<span class="text-danger">✗</span>';
+            row.appendChild(sourceCell);
             
-            // Target database column
-            html += '<td>';
-            if (table.in_db2) {
-                html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Present</span>';
-            } else {
-                html += '<span class="status-badge status-deleted"><i class="bi bi-x-circle-fill"></i> Missing</span>';
-            }
-            html += '</td>';
+            const targetCell = document.createElement('td');
+            targetCell.innerHTML = table.in_db2 ? '<span class="text-success">✓</span>' : '<span class="text-danger">✗</span>';
+            row.appendChild(targetCell);
             
-            // Status column
-            html += '<td>';
-            if (!table.differences) {
-                html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Identical</span>';
-            } else {
-                html += '<span class="status-badge status-modified"><i class="bi bi-exclamation-circle-fill"></i> Differences</span>';
-            }
-            html += '</td>';
+            // Differences cell
+            const diffCell = document.createElement('td');
             
-            // Actions column
-            html += '<td>';
             if (table.in_db1 && table.in_db2) {
-                html += `<button class="btn btn-sm btn-outline-primary toggle-details" data-table="${table.table_name}">`;
-                html += '<i class="bi bi-list-ul"></i> Details</button> ';
-                html += `<button class="btn btn-sm btn-outline-secondary view-create-script" data-table="${table.table_name}">`;
-                html += '<i class="bi bi-code-slash"></i> SQL</button>';
+                if (table.differences) {
+                    diffCell.innerHTML = `<span class="badge bg-warning text-dark">${table.columns.length} differences</span>`;
+                } else {
+                    diffCell.innerHTML = '<span class="badge bg-success">Identical</span>';
+                }
             } else {
-                html += '<span class="text-muted">Not comparable</span>';
+                diffCell.innerHTML = '<span class="badge bg-danger">Table missing</span>';
             }
-            html += '</td></tr>';
+            row.appendChild(diffCell);
             
-            // Add details row if applicable
+            // Actions cell
+            const actionsCell = document.createElement('td');
+            
             if (table.in_db1 && table.in_db2) {
-                const detailsId = `details-${table.table_name.replace(/\s/g, '_').replace(/\./g, '_')}`;
-                
-                html += `<tr class="details-row" id="${detailsId}" style="display: none;"><td colspan="5">`;
-                html += '<div class="table-responsive"><table class="coral-table coral-table-striped">';
-                html += '<thead><tr><th>Column Name</th><th>Source Database</th><th>Target Database</th><th>Status</th></tr></thead>';
-                html += '<tbody>';
-                
-                table.columns.forEach(column => {
-                    const columnClass = column.differences ? 'diff-modified' : '';
-                    
-                    html += `<tr class="${columnClass}">`;
-                    html += `<td>${column.column_name}</td>`;
-                    
-                    // Source column details
-                    html += '<td>';
-                    if (column.in_db1) {
-                        html += column.source.formatted_data_type;
-                        if (column.source.is_nullable === 'No') {
-                            html += ' <span class="status-badge status-unchanged">NOT NULL</span>';
-                        }
-                        if (column.source.is_primary_key === 'Yes') {
-                            html += ' <span class="status-badge" style="background-color: #2196F3;">PK</span>';
-                        }
-                        if (column.source.is_identity === 'Yes') {
-                            html += ' <span class="status-badge" style="background-color: #333333;">Identity</span>';
-                        }
-                    } else {
-                        html += '<span class="status-badge status-deleted">Missing</span>';
-                    }
-                    html += '</td>';
-                    
-                    // Target column details
-                    html += '<td>';
-                    if (column.in_db2) {
-                        html += column.target.formatted_data_type;
-                        if (column.target.is_nullable === 'No') {
-                            html += ' <span class="status-badge status-unchanged">NOT NULL</span>';
-                        }
-                        if (column.target.is_primary_key === 'Yes') {
-                            html += ' <span class="status-badge" style="background-color: #2196F3;">PK</span>';
-                        }
-                        if (column.target.is_identity === 'Yes') {
-                            html += ' <span class="status-badge" style="background-color: #333333;">Identity</span>';
-                        }
-                    } else {
-                        html += '<span class="status-badge status-deleted">Missing</span>';
-                    }
-                    html += '</td>';
-                    
-                    // Status column
-                    html += '<td>';
-                    if (!column.differences) {
-                        html += '<span class="status-badge status-unchanged"><i class="bi bi-check-circle-fill"></i> Identical</span>';
-                    } else {
-                        html += '<span class="status-badge status-modified"><i class="bi bi-exclamation-circle-fill"></i> Different</span>';
-                    }
-                    html += '</td></tr>';
+                // Details button
+                const detailsBtn = document.createElement('button');
+                detailsBtn.type = 'button';
+                detailsBtn.className = 'btn btn-sm btn-outline-primary me-2 toggle-details';
+                detailsBtn.setAttribute('data-table', table.table_name);
+                detailsBtn.textContent = 'Details';
+                detailsBtn.addEventListener('click', function() {
+                    toggleDetails(table.table_name);
                 });
+                actionsCell.appendChild(detailsBtn);
                 
-                html += '</tbody></table></div></td></tr>';
+                // Script comparison button
+                const scriptBtn = document.createElement('button');
+                scriptBtn.type = 'button';
+                scriptBtn.className = 'btn btn-sm btn-outline-secondary view-create-script';
+                scriptBtn.setAttribute('data-table', table.table_name);
+                scriptBtn.textContent = 'View Script';
+                scriptBtn.addEventListener('click', function() {
+                    viewCreateTableScript(table.table_name);
+                });
+                actionsCell.appendChild(scriptBtn);
+            }
+            row.appendChild(actionsCell);
+            
+            // Create detail row if there are differences
+            if (table.in_db1 && table.in_db2 && table.differences) {
+                const detailRow = document.createElement('tr');
+                detailRow.className = 'detail-row d-none';
+                detailRow.id = `detail-${table.table_name}`;
+                
+                const detailCell = document.createElement('td');
+                detailCell.colSpan = 5;
+                
+                // Create details table
+                if (table.columns && table.columns.length > 0) {
+                    const detailTable = document.createElement('table');
+                    detailTable.className = 'table table-sm table-bordered';
+                    
+                    // Table header
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    ['Column', 'Source', 'Target', 'Difference'].forEach(text => {
+                        const th = document.createElement('th');
+                        th.textContent = text;
+                        headerRow.appendChild(th);
+                    });
+                    thead.appendChild(headerRow);
+                    detailTable.appendChild(thead);
+                    
+                    // Table body for column differences
+                    const tbody = document.createElement('tbody');
+                    table.columns.forEach(col => {
+                        const colRow = document.createElement('tr');
+                        
+                        // Column name
+                        const nameCell = document.createElement('td');
+                        nameCell.textContent = col.column_name;
+                        colRow.appendChild(nameCell);
+                        
+                        // Source value
+                        const sourceCell = document.createElement('td');
+                        sourceCell.textContent = col.source_value || 'N/A';
+                        colRow.appendChild(sourceCell);
+                        
+                        // Target value
+                        const targetCell = document.createElement('td');
+                        targetCell.textContent = col.target_value || 'N/A';
+                        colRow.appendChild(targetCell);
+                        
+                        // Difference description
+                        const diffCell = document.createElement('td');
+                        diffCell.textContent = col.difference_type;
+                        colRow.appendChild(diffCell);
+                        
+                        tbody.appendChild(colRow);
+                    });
+                    detailTable.appendChild(tbody);
+                    detailCell.appendChild(detailTable);
+                } else {
+                    detailCell.textContent = 'No detailed information available.';
+                }
+                
+                detailRow.appendChild(detailCell);
+                
+                // Return both rows as a document fragment
+                const fragment = document.createDocumentFragment();
+                fragment.appendChild(row);
+                fragment.appendChild(detailRow);
+                return fragment;
             }
             
-            return html;
+            return row;
+        }
+        
+        function viewCreateTableScript(tableName) {
+            // Show loading state
+            document.getElementById('sourceScript').textContent = 'Loading...';
+            document.getElementById('targetScript').textContent = 'Loading...';
+            
+            // Show the modal
+            const scriptModal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
+            scriptModal.show();
+            
+            // Fetch the scripts
+            fetch(`/comparison/schema/scripts/${tableName}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('sourceScript').textContent = data.source_script || 'No script available';
+                    document.getElementById('targetScript').textContent = data.target_script || 'No script available';
+                    
+                    // Update modal title
+                    document.getElementById('scriptComparisonModalLabel').textContent = `CREATE TABLE Script: ${tableName}`;
+                })
+                .catch(error => {
+                    console.error('Error fetching scripts:', error);
+                    document.getElementById('sourceScript').textContent = 'Error loading script';
+                    document.getElementById('targetScript').textContent = 'Error loading script';
+                });
+        }
+        
+        function toggleDetails(tableName) {
+            const detailRow = document.getElementById(`detail-${tableName}`);
+            if (detailRow) {
+                if (detailRow.classList.contains('d-none')) {
+                    detailRow.classList.remove('d-none');
+                } else {
+                    detailRow.classList.add('d-none');
+                }
+            }
         }
         
         function updateProgress(progress, processedTables, totalTables, currentTable) {
@@ -496,84 +552,91 @@
         
         function fetchComparisonResults(offset = 0, accumulatedResults = []) {
             if (document.getElementById('progressCard')) {
-                fetch(`/comparison/schema/status?offset=${offset}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'in_progress') {
-                            // Update progress
-                            updateProgress(
-                                data.progress,
-                                data.processed_tables,
-                                data.total_tables,
-                                data.current_table
-                            );
-                            
-                            // Check again after a delay
-                            setTimeout(() => fetchComparisonResults(offset, accumulatedResults), 1000);
-                        } else if (data.status === 'complete') {
-                            // Combine results
-                            const results = [...accumulatedResults, ...data.results];
-                            
-                            // Check if we need to fetch more results
-                            if (data.has_more) {
-                                fetchComparisonResults(offset + data.results.length, results);
-                            } else {
-                                // Update progress to 100%
-                                updateProgress(100, data.total_tables, data.total_tables, '');
-                                
-                                // Render the results
-                                const tableBody = document.getElementById('comparisonTableBody');
-                                if (tableBody) {
-                                    let html = '';
-                                    results.forEach(table => {
-                                        html += createTableRow(table);
-                                    });
-                                    tableBody.innerHTML = html;
-                                    
-                                    // Set up event handlers for the newly created elements
-                                    setupToggleDetails();
-                                    
-                                    // Set up CREATE TABLE script comparison
-                                    document.querySelectorAll('.view-create-script').forEach(button => {
-                                        button.addEventListener('click', function() {
-                                            const tableName = this.getAttribute('data-table');
-                                            
-                                            // Show loading state
-                                            document.getElementById('sourceScript').textContent = 'Loading...';
-                                            document.getElementById('targetScript').textContent = 'Loading...';
-                                            
-                                            // Show the modal
-                                            const scriptModal = new bootstrap.Modal(document.getElementById('scriptComparisonModal'));
-                                            scriptModal.show();
-                                            
-                                            // Fetch the scripts
-                                            fetch(`/comparison/schema/scripts/${tableName}`)
-                                                .then(response => response.json())
-                                                .then(data => {
-                                                    document.getElementById('sourceScript').textContent = data.source_script || 'No script available';
-                                                    document.getElementById('targetScript').textContent = data.target_script || 'No script available';
-                                                    
-                                                    // Update modal title
-                                                    document.getElementById('scriptComparisonModalLabel').textContent = `CREATE TABLE Script: ${tableName}`;
-                                                })
-                                                .catch(error => {
-                                                    console.error('Error fetching scripts:', error);
-                                                    document.getElementById('sourceScript').textContent = 'Error loading script';
-                                                    document.getElementById('targetScript').textContent = 'Error loading script';
-                                                });
-                                        });
-                                    });
-                                    
-                                    // Apply initial filter
-                                    applyTableFilter();
-                                }
+                fetch(`/comparison/api/schema_comparison_progress?offset=${offset}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            if (response.status === 403) {
+                                throw new Error('Session expired. Please refresh the page and try again.');
                             }
+                            throw new Error('Network response was not ok: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Received data:', data);  // Debug logging
+                        
+                        if (data.status === 'error') {
+                            throw new Error(data.message || 'An error occurred during comparison');
+                        }
+                        
+                        // Update progress regardless of status
+                        updateProgress(
+                            data.progress,
+                            data.processed_tables,
+                            data.total_tables,
+                            data.current_table
+                        );
+                        
+                        if (data.status === 'in_progress') {
+                            // If there's a next offset, continue with the next batch
+                            if (data.next_offset) {
+                                // Wait a short time to avoid overwhelming the server
+                                setTimeout(() => {
+                                    fetchComparisonResults(data.next_offset, 
+                                        accumulatedResults.concat(data.partial_results || []));
+                                }, 500);
+                            } else {
+                                // No next offset but still in progress - wait and retry current offset
+                                setTimeout(() => {
+                                    fetchComparisonResults(offset, accumulatedResults);
+                                }, 2000);
+                            }
+                        } else if (data.status === 'complete') {
+                            // Comparison is complete
+                            const elements = {
+                                progressCard: document.getElementById('progressCard'),
+                                resultsCard: document.getElementById('resultsCard'),
+                                tbody: document.getElementById('comparisonTableBody')
+                            };
+                            
+                            if (!Object.values(elements).every(Boolean)) return;
+                            
+                            // Hide progress card, show results card
+                            elements.progressCard.style.display = 'none';
+                            elements.resultsCard.style.display = 'block';
+                            
+                            // Combine accumulated results with final results
+                            const finalResults = data.results || [];
+                            elements.tbody.innerHTML = '';
+                            
+                            // Populate the table with results
+                            finalResults.forEach(table => {
+                                const row = createTableRow(table);
+                                if (row) elements.tbody.appendChild(row);
+                            });
+                            
+                            console.log('Comparison complete with', finalResults.length, 'tables');
                         }
                     })
                     .catch(error => {
-                        console.error('Error fetching comparison status:', error);
-                        // Retry after a delay
-                        setTimeout(() => fetchComparisonResults(offset, accumulatedResults), 2000);
+                        console.error('Error fetching comparison results:', error);
+                        const progressStatus = document.getElementById('progressStatus');
+                        if (progressStatus) {
+                            progressStatus.textContent = 'Error: ' + error.message;
+                            progressStatus.style.color = 'red';
+                        }
+                        
+                        // Retry after a delay in case of error
+                        setTimeout(() => {
+                            fetchComparisonResults(offset, accumulatedResults);
+                        }, 5000);
                     });
             }
         }

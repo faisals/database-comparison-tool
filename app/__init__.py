@@ -4,6 +4,7 @@ Database Table Comparison Tool - A web application to compare tables between dat
 import os
 import secrets
 from flask import Flask
+from flask_cors import CORS
 
 def create_app(test_config=None):
     """Create and configure the Flask application"""
@@ -13,6 +14,16 @@ def create_app(test_config=None):
     
     # Set up configuration
     app.config['SECRET_KEY'] = secrets.token_hex(16)
+    
+    # Configure CORS
+    CORS(app, resources={
+        r"/comparison/api/*": {
+            "origins": ["http://localhost:5000", "http://localhost:3000"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }
+    })
     
     # Register blueprints
     from app.routes.main import main_bp
