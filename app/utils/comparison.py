@@ -104,7 +104,7 @@ def compare_schemas(schema1, schema2):
 
 def compare_create_table_scripts(script1, script2):
     """
-    Compare two CREATE TABLE scripts and return a unified diff with HTML formatting
+    Compare two CREATE TABLE scripts and return a unified diff with GitHub-style HTML formatting
     
     Args:
         script1 (str): The first CREATE TABLE script (source)
@@ -113,7 +113,7 @@ def compare_create_table_scripts(script1, script2):
     Returns:
         dict: Dictionary containing the comparison results
             - has_differences (bool): Whether there are differences between the scripts
-            - diff_html (str): HTML-formatted unified diff
+            - diff_html (str): HTML-formatted unified diff with GitHub-style visual cues
             - source_script (str): Original source script
             - target_script (str): Original target script
     """
@@ -134,26 +134,84 @@ def compare_create_table_scripts(script1, script2):
     diff_list = list(diff)
     has_differences = len(diff_list) > 0
     
-    # Format diff as HTML
+    # Format diff as HTML with GitHub-style classes
     diff_html = []
+    
+    # Add container for the GitHub-style diff
+    diff_html.append('<div class="github-diff-container">')
+    
+    line_number_source = 0
+    line_number_target = 0
+    in_hunk_header = False
+    
     for line in diff_list:
-        if line.startswith('+'):
-            # Added line (in target, not in source)
-            formatted_line = f'<div class="diff-line diff-added">{html.escape(line)}</div>'
-        elif line.startswith('-'):
-            # Removed line (in source, not in target)
-            formatted_line = f'<div class="diff-line diff-removed">{html.escape(line)}</div>'
-        elif line.startswith('@@'):
-            # Diff header
-            formatted_line = f'<div class="diff-line diff-header">{html.escape(line)}</div>'
+        if line.startswith('@@'):
+            # Diff hunk header - parse line numbers
+            in_hunk_header = True
+            # Extract line numbers from the hunk header
+            # Format is typically @@ -<start_line>,<line_count> +<start_line>,<line_count> @@
+            parts = line.split(' ')
+            if len(parts) >= 3:
+                source_info = parts[1].lstrip('-')
+                target_info = parts[2].lstrip('+')
+                
+                if ',' in source_info:
+                    line_number_source = int(source_info.split(',')[0])
+                else:
+                    line_number_source = int(source_info) if source_info.isdigit() else 0
+                    
+                if ',' in target_info:
+                    line_number_target = int(target_info.split(',')[0])
+                else:
+                    line_number_target = int(target_info) if target_info.isdigit() else 0
+            
+            formatted_line = f'<div class="diff-hunk-header">{html.escape(line)}</div>'
+            diff_html.append(formatted_line)
         elif line.startswith('---') or line.startswith('+++'):
             # File header
-            formatted_line = f'<div class="diff-line diff-file-header">{html.escape(line)}</div>'
+            formatted_line = f'<div class="diff-file-header">{html.escape(line)}</div>'
+            diff_html.append(formatted_line)
+            in_hunk_header = False
         else:
-            # Context line (unchanged)
-            formatted_line = f'<div class="diff-line diff-context">{html.escape(line)}</div>'
-        
-        diff_html.append(formatted_line)
+            # Reset hunk header flag
+            in_hunk_header = False
+            
+            if line.startswith('+'):
+                # Added line (in target, not in source)
+                line_number_target += 1
+                formatted_line = (
+                    f'<div class="diff-line diff-added">'
+                    f'<div class="diff-line-num diff-line-num-source empty-line-num"></div>'
+                    f'<div class="diff-line-num diff-line-num-target">{line_number_target}</div>'
+                    f'<div class="diff-line-content">{html.escape(line[1:])}</div>'
+                    f'</div>'
+                )
+            elif line.startswith('-'):
+                # Removed line (in source, not in target)
+                line_number_source += 1
+                formatted_line = (
+                    f'<div class="diff-line diff-removed">'
+                    f'<div class="diff-line-num diff-line-num-source">{line_number_source}</div>'
+                    f'<div class="diff-line-num diff-line-num-target empty-line-num"></div>'
+                    f'<div class="diff-line-content">{html.escape(line[1:])}</div>'
+                    f'</div>'
+                )
+            else:
+                # Context line (unchanged)
+                line_number_source += 1
+                line_number_target += 1
+                formatted_line = (
+                    f'<div class="diff-line diff-context">'
+                    f'<div class="diff-line-num diff-line-num-source">{line_number_source}</div>'
+                    f'<div class="diff-line-num diff-line-num-target">{line_number_target}</div>'
+                    f'<div class="diff-line-content">{html.escape(line[1:] if line.startswith(" ") else line)}</div>'
+                    f'</div>'
+                )
+            
+            diff_html.append(formatted_line)
+    
+    # Close the container
+    diff_html.append('</div>')
     
     # Join HTML lines
     diff_html_str = '\n'.join(diff_html)

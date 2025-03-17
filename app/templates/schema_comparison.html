@@ -81,23 +81,17 @@
     
     <!-- CREATE Script Modal -->
     <div class="modal fade" id="createScriptModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Table CREATE Scripts</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Source Database</h6>
-                            <pre><code class="language-sql" id="sourceCreateScript"></code></pre>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Target Database</h6>
-                            <pre><code class="language-sql" id="targetCreateScript"></code></pre>
-                        </div>
-                    </div>
+                    <!-- Content will be loaded dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -149,6 +143,80 @@
 .bg-info-subtle {
     background-color: rgba(13, 202, 240, 0.1);
 }
+
+/* GitHub-style diff styling */
+.github-diff-container {
+    font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.diff-file-header {
+    padding: 8px 16px;
+    background-color: #f1f8ff;
+    border-bottom: 1px solid #d8dee4;
+    color: #586069;
+    font-weight: 600;
+}
+
+.diff-hunk-header {
+    padding: 4px 16px;
+    background-color: #f1f8ff;
+    border-bottom: 1px solid #d8dee4;
+    color: #586069;
+    font-size: 12px;
+}
+
+.diff-line {
+    display: flex;
+    width: 100%;
+}
+
+.diff-line-num {
+    width: 40px;
+    padding: 0 10px;
+    text-align: right;
+    color: #959da5;
+    background-color: #fafbfc;
+    border-right: 1px solid #e1e4e8;
+    user-select: none;
+}
+
+.empty-line-num {
+    background-color: #fafbfc;
+}
+
+.diff-line-content {
+    flex-grow: 1;
+    padding: 0 10px;
+    white-space: pre;
+}
+
+.diff-added {
+    background-color: #e6ffec;
+}
+
+.diff-added .diff-line-num-target {
+    background-color: #cdffd8;
+    border-color: #bef5cb;
+}
+
+.diff-removed {
+    background-color: #ffebe9;
+}
+
+.diff-removed .diff-line-num-source {
+    background-color: #ffd7d5;
+    border-color: #ffc1bc;
+}
+
+.diff-context {
+    background-color: #ffffff;
+}
 </style>
 
 <script>
@@ -158,28 +226,83 @@
 document.addEventListener('DOMContentLoaded', function() {
     const showDifferencesToggle = document.getElementById('showDifferencesToggle');
     const tableAccordion = document.getElementById('tableAccordion');
-    const viewCreateScriptsBtn = document.getElementById('viewCreateScripts');
     const createScriptModal = document.getElementById('createScriptModal');
     
     if (createScriptModal) {
         const bsModal = new bootstrap.Modal(createScriptModal);
         
-        viewCreateScriptsBtn?.addEventListener('click', function() {
-            const sourceScript = '-- Source table CREATE script will be shown here';
-            const targetScript = '-- Target table CREATE script will be shown here';
-            
-            const sourceEl = document.getElementById('sourceCreateScript');
-            const targetEl = document.getElementById('targetCreateScript');
-            
-            if (sourceEl) sourceEl.textContent = sourceScript;
-            if (targetEl) targetEl.textContent = targetScript;
-            
-            // Highlight syntax
-            if (typeof Prism !== 'undefined') {
-                Prism.highlightAll();
+        // Add event listener for table detail buttons
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('toggle-details') || 
+                event.target.parentElement.classList.contains('toggle-details')) {
+                
+                const button = event.target.classList.contains('toggle-details') ? 
+                    event.target : event.target.parentElement;
+                const tableName = button.getAttribute('data-table');
+                
+                if (tableName) {
+                    // Show loading state
+                    const modalBody = document.querySelector('#createScriptModal .modal-body');
+                    modalBody.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+                    
+                    // Show the modal
+                    bsModal.show();
+                    
+                    // Update modal title
+                    document.querySelector('#createScriptModal .modal-title').textContent = `CREATE TABLE Script: ${tableName}`;
+                    
+                    // Fetch the CREATE TABLE scripts
+                    fetch(`/comparison/api/create_table_script/${tableName}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.status === 'success') {
+                                const comparison = data.comparison;
+                                
+                                // Update modal content
+                                modalBody.innerHTML = `
+                                    <ul class="nav nav-tabs" id="scriptTabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="diff-tab" data-bs-toggle="tab" data-bs-target="#diff-view" type="button" role="tab" aria-controls="diff-view" aria-selected="true">Diff View</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="source-tab" data-bs-toggle="tab" data-bs-target="#source-view" type="button" role="tab" aria-controls="source-view" aria-selected="false">Source Script</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="target-tab" data-bs-toggle="tab" data-bs-target="#target-view" type="button" role="tab" aria-controls="target-view" aria-selected="false">Target Script</button>
+                                        </li>
+                                    </ul>
+                                    <div class="tab-content p-3" id="scriptTabsContent">
+                                        <div class="tab-pane fade show active" id="diff-view" role="tabpanel" aria-labelledby="diff-tab">
+                                            ${comparison.diff_html}
+                                        </div>
+                                        <div class="tab-pane fade" id="source-view" role="tabpanel" aria-labelledby="source-tab">
+                                            <pre><code class="language-sql">${comparison.source_script}</code></pre>
+                                        </div>
+                                        <div class="tab-pane fade" id="target-view" role="tabpanel" aria-labelledby="target-tab">
+                                            <pre><code class="language-sql">${comparison.target_script}</code></pre>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                // Highlight syntax if Prism is available
+                                if (typeof Prism !== 'undefined') {
+                                    Prism.highlightAll();
+                                }
+                            } else {
+                                modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load scripts'}</div>`;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching scripts:', error);
+                            modalBody.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+                        });
+                }
             }
-            
-            bsModal.show();
         });
     }
 
